@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AlphaTeam Replay</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1c1c1f; --muted: #6a6a72; --line: #e3e1db; --soft: #efede8;
+  --accent: #2f6fe0; --warn-bg: #fff4dc; --warn-ink: #7a5300; --info-bg: #eef3fc; --info-ink: #284a86;
+  --grp-fill: rgba(70, 70, 90, .045); --grp-stroke: #cbc8bf; --grp-top: #a29e93; --nofocus: #c9c6be; --link: #7c5cff;
+  --s0: #2a78d6; --s1: #eb6834; --s2: #1baf7a; --s3: #eda100; --s4: #e87ba4; --s5: #008300;
+  --s6: #6250d6; --s7: #e34948; --s8: #9a6a2f; --s9: #0f9fbf; --s10: #7f8a00; --s11: #a3449e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #131315; --panel: #1b1b1e; --ink: #ececf0; --muted: #9b9ba4; --line: #2d2d33; --soft: #232327;
+    --accent: #6d9cf5; --warn-bg: #3a2f17; --warn-ink: #f2cf86; --info-bg: #1d2533; --info-ink: #a9c3f2;
+    --grp-fill: rgba(220, 220, 255, .04); --grp-stroke: #3b3b44; --grp-top: #5a5a66; --nofocus: #55555d; --link: #a08cff;
+    --s0: #3987e5; --s1: #d95926; --s2: #199e70; --s3: #c98500; --s4: #d55181; --s5: #2f9a2f;
+    --s6: #9085e9; --s7: #e66767; --s8: #b08040; --s9: #2bb3d1; --s10: #9aa32a; --s11: #c369be;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #131315; --panel: #1b1b1e; --ink: #ececf0; --muted: #9b9ba4; --line: #2d2d33; --soft: #232327;
+  --accent: #6d9cf5; --warn-bg: #3a2f17; --warn-ink: #f2cf86; --info-bg: #1d2533; --info-ink: #a9c3f2;
+  --grp-fill: rgba(220, 220, 255, .04); --grp-stroke: #3b3b44; --grp-top: #5a5a66; --nofocus: #55555d; --link: #a08cff;
+  --s0: #3987e5; --s1: #d95926; --s2: #199e70; --s3: #c98500; --s4: #d55181; --s5: #2f9a2f;
+  --s6: #9085e9; --s7: #e66767; --s8: #b08040; --s9: #2bb3d1; --s10: #9aa32a; --s11: #c369be;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; overflow-x: hidden; }
+button, select, input { font: inherit; color: inherit; }
+code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+header { padding: 14px 20px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.title-row { display: flex; gap: 6px 12px; align-items: baseline; flex-wrap: wrap; }
+h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+.meta { color: var(--muted); font-size: 12.5px; min-width: 0; overflow-wrap: anywhere; }
+.spacer { flex: 1; }
+.iconbtn { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 2px 9px; cursor: pointer; }
+.iconbtn:hover { border-color: var(--muted); }
+.kpis { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.kpis b { color: var(--ink); font-variant-numeric: tabular-nums; font-size: 13.5px; }
+.kpis .hero b { font-size: 18px; }
+.banner { margin-top: 8px; padding: 6px 10px; border-radius: 6px; font-size: 12.5px; overflow-wrap: anywhere; }
+.banner.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.banner.info { background: var(--info-bg); color: var(--info-ink); }
+.bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; align-items: center; padding: 8px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.bar button { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+.bar button:hover { border-color: var(--muted); }
+.slider { position: relative; flex: 1; min-width: 100px; padding-top: 12px; }
+.slider input { width: 100%; margin: 0; accent-color: var(--accent); display: block; }
+.marks { position: absolute; left: 8px; right: 8px; top: 0; height: 12px; }
+.mark { position: absolute; top: 0; transform: translateX(-50%); font-size: 10px; line-height: 12px; color: var(--warn-ink); cursor: pointer; padding: 0 2px; border-radius: 3px; background: var(--warn-bg); }
+#tickLabel { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; font-size: 13px; }
+#tickLabel small { font-weight: 400; color: var(--warn-ink); }
+main { display: grid; gap: 12px; padding: 12px 20px 28px; grid-template-columns: minmax(0, 1fr) minmax(340px, 430px); grid-template-areas: "map side" "charts side"; align-items: start; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.card-head h2 { font-size: 13.5px; margin: 0; color: var(--ink); font-weight: 650; }
+.card-head label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+.card-head .zoomer { display: inline-flex; gap: 4px; }
+.card-head .zoomer button { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 0 8px; cursor: pointer; }
+#mapCard { grid-area: map; scroll-margin-top: 64px; }
+#chartsCard { grid-area: charts; }
+#side { grid-area: side; scroll-margin-top: 64px; position: sticky; top: 56px; max-height: calc(100vh - 68px); display: flex; flex-direction: column; }
+#stage { position: relative; height: min(72vh, 780px); min-height: 360px; overflow: hidden; }
+#svg { width: 100%; height: 100%; display: block; cursor: grab; }
+#svg:active { cursor: grabbing; }
+.mapstats { font-size: 12px; color: var(--muted); padding: 5px 12px; border-bottom: 1px solid var(--soft); }
+.mapstats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+#zoomHint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: var(--ink); color: var(--panel); font-size: 12px; padding: 4px 10px; border-radius: 6px; pointer-events: none; display: none; white-space: nowrap; }
+#tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-size: 12px; max-width: 280px; box-shadow: 0 2px 10px rgba(0,0,0,.12); display: none; z-index: 3; }
+#tip .sub { display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); align-items: center; }
+.legend .lg { cursor: pointer; border-radius: 4px; padding: 0 3px; }
+.legend .lg.on { background: var(--soft); color: var(--ink); outline: 1px solid var(--muted); }
+.legend .note { flex-basis: 100%; }
+i.sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; flex: none; }
+i.sq { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: 3px; }
+.gc { fill: var(--grp-fill); stroke: var(--grp-stroke); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: pointer; pointer-events: all; }
+.gc.deep { fill: none; }
+.gc.top { stroke: var(--grp-top); }
+.gc.k-una, .gc.k-gone { fill: none; stroke: var(--muted); stroke-dasharray: 5 4; cursor: default; }
+.gc.k-gone { stroke-dasharray: 2 3; }
+.dot { stroke: var(--panel); stroke-width: .5; vector-effect: non-scaling-stroke; cursor: pointer; }
+.dot.inactive { opacity: .3; }
+.dot.dim { opacity: .1; }
+.gc.sel, .dot.sel { stroke: var(--accent); stroke-width: 2.5; }
+.sec { stroke: var(--link); stroke-opacity: .3; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+.sec.hot { stroke-opacity: .95; stroke-width: 1.8; }
+.alink { stroke: var(--ink, currentColor); stroke-opacity: .28; stroke-width: 1; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+.alink.hot { stroke-opacity: .9; stroke-width: 1.6; }
+.glabel { fill: var(--ink); paint-order: stroke; stroke: var(--panel); font-weight: 600; pointer-events: none; }
+.glabel.k-una, .glabel.k-gone { fill: var(--muted); font-weight: 500; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
+.tabs button { flex: 1; border: 0; background: none; padding: 9px 8px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; white-space: nowrap; }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+#panel { overflow-y: auto; padding: 12px 14px 24px; flex: 1; min-height: 0; overflow-wrap: anywhere; }
+#panel h2 { font-size: 15px; margin: 0 0 2px; }
+#panel h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; font-weight: 600; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.bad { color: var(--warn-ink); background: var(--warn-bg); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+.chip { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); font-size: 12px; margin: 2px 3px 2px 0; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip:hover { border-color: var(--muted); }
+.chip small { color: var(--muted); margin-left: 4px; }
+.chip.plain { cursor: default; }
+.kv { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 3px 8px; font-size: 13px; }
+.kv > div:nth-child(odd) { color: var(--muted); }
+.txt { white-space: pre-wrap; font-size: 13px; background: var(--soft); border-radius: 6px; padding: 6px 8px; margin: 2px 0; }
+.btnrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.btn { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 2px 9px; cursor: pointer; font-size: 12.5px; }
+.btn:hover { border-color: var(--muted); }
+.pbar { display: flex; gap: 1px; height: 12px; border-radius: 4px; overflow: hidden; background: var(--soft); margin: 4px 0; }
+.pbar span { display: block; min-width: 1px; }
+.ovr { padding: 6px 0; border-bottom: 1px solid var(--soft); cursor: pointer; }
+.ovr:hover .nm { text-decoration: underline; }
+.ovr .nm { font-weight: 600; font-size: 13px; }
+.post { border-left: 3px solid var(--line); padding: 2px 0 2px 8px; margin: 5px 0; font-size: 12.5px; }
+.ev { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 8px; padding: 5px 0; border-bottom: 1px solid var(--soft); font-size: 12.5px; cursor: pointer; }
+.ev .op { font-size: 11px; padding: 1px 6px 1px 5px; border-radius: 4px; background: var(--soft); border-left: 3px solid var(--fam, var(--muted)); white-space: nowrap; align-self: start; margin-top: 1px; }
+.ev.fail { opacity: .62; }
+.ev .who, .ev .tg { font-weight: 600; cursor: pointer; }
+.ev .who:hover, .ev .tg:hover { text-decoration: underline; }
+.ev .msg { color: var(--muted); }
+.ev.intent .msg { font-style: italic; color: var(--ink); }
+.ev .args { display: none; margin-top: 4px; padding: 4px 6px; background: var(--soft); border-radius: 5px; font-size: 12px; }
+.ev.open .args { display: block; }
+.ev.now { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.fams { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 6px 0; }
+.fams .chip.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.fams .chip i.sq { margin-right: 4px; }
+.search { width: 100%; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--soft); }
+.tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.tools label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+.tools .search { flex: 1; min-width: 150px; width: auto; }
+.tablewrap { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+td, th { text-align: left; padding: 4px 5px; border-bottom: 1px solid var(--soft); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 11.5px; white-space: nowrap; position: sticky; top: 0; background: var(--panel); }
+th[data-sort] { cursor: pointer; }
+th[data-sort]:hover { color: var(--ink); }
+td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+th.n { text-align: right; }
+td .f { display: block; overflow-wrap: anywhere; }
+td .f.truth { color: var(--muted); }
+td.nw { white-space: nowrap; }
+td.mono { overflow-wrap: anywhere; }
+tr.r1 td { border-bottom: 0; padding-bottom: 1px; }
+tr.r2 td { padding-top: 0; padding-bottom: 7px; color: var(--ink); }
+.fl { float: left; clear: left; width: 38px; color: var(--muted); font-size: 11px; line-height: 18px; }
+tr.r2 code.f { margin-left: 40px; line-height: 18px; }
+.laws, .acts { min-width: 330px; }
+pre.lessons { white-space: pre-wrap; background: var(--soft); border-radius: 6px; padding: 10px; margin: 0; overflow-wrap: anywhere; }
+.charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 10px 14px; padding: 10px 12px 12px; }
+.chart { min-width: 0; }
+.ch-title { font-size: 12.5px; font-weight: 600; }
+.ch-note { font-size: 11px; color: var(--muted); line-height: 1.3; }
+.ch-legend { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 11.5px; color: var(--muted); min-height: 17px; }
+.ch-legend b { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart .grid line { stroke: var(--line); stroke-width: 1; }
+.chart .zero { stroke: var(--muted); stroke-width: 1; stroke-opacity: .5; }
+.chart .ax text { fill: var(--muted); font-size: 10px; }
+.chart .shock { stroke: var(--warn-ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.chart .now { stroke: var(--ink); stroke-width: 1.2; opacity: .55; }
+.chart .hov { stroke: var(--accent); stroke-width: 1; opacity: .8; }
+.chart .ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .hit { fill: transparent; cursor: crosshair; }
+#picker { max-width: 640px; width: calc(100% - 32px); margin: 40px auto; padding: 22px; }
+#picker p { margin: 0 0 10px; }
+.hide { display: none !important; }
+.only-narrow { display: none; }
+@media (max-width: 900px) {
+  header { padding: 12px 16px 10px; }
+  .bar { padding: 8px 16px; }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-areas: "map" "side" "charts"; padding: 12px 16px 24px; }
+  #side { position: static; max-height: none; }
+  #panel { max-height: 78vh; }
+  #stage { height: calc(100vw - 34px); max-height: 600px; min-height: 280px; }
+  .only-narrow { display: inline-flex; }
+  .title-row .meta { order: 3; flex-basis: 100%; }
+}
+@media (max-width: 480px) {
+  .mark .rest { display: none; }
+  .bar button { padding: 3px 7px; }
+  .bar #play { min-width: 0; }
+  .kv { grid-template-columns: 96px minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="title-row">
+    <h1 id="title">AlphaTeam replay</h1>
+    <span class="meta" id="meta"></span>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="theme" aria-label="Toggle light or dark theme" title="Toggle theme">◐</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div id="banners"></div>
+</header>
+<div class="bar hide" id="bar">
+  <button id="prev" aria-label="Previous tick">◀</button>
+  <button id="play" aria-label="Play">▶ Play</button>
+  <button id="next" aria-label="Next tick">▶</button>
+  <div class="slider"><input type="range" id="tick" min="0" value="0" aria-label="Tick"><div class="marks" id="marks"></div></div>
+  <span id="tickLabel"></span>
+</div>
+<section class="card hide" id="picker">
+  <h2 style="margin:0 0 8px;font-size:16px">Open a alphateam run</h2>
+  <p class="sub">This viewer has no run embedded (open the <code>viewer.html</code> that a run writes next to its <code>run.json</code> to get one with events). Choose a <code>run.json</code>; add that run's <code>events.jsonl</code> too (select both) to see events.</p>
+  <p><input type="file" id="file" accept=".json,.jsonl,application/json" multiple></p>
+  <p class="sub" id="pickMsg"></p>
+</section>
+<main id="app" class="hide">
+  <section class="card" id="mapCard">
+    <div class="card-head">
+      <h2 id="mapTitle">Organization</h2>
+      <label title="Draw lines from agents and groups to the other groups they also belong to"><input type="checkbox" id="optSec"> secondary memberships</label>
+      <label title="Show agents that left the society, faded"><input type="checkbox" id="optInactive"> inactive agents</label>
+      <label title="Draw private links between agents (dashed)"><input type="checkbox" id="optLinks" checked> links</label>
+      <span class="spacer"></span>
+      <span class="zoomer"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zreset">reset</button></span>
+      <button class="btn only-narrow hide" id="toPanel">Inspect ↓</button>
+    </div>
+    <div class="mapstats" id="mapstats"></div>
+    <div id="stage"><svg id="svg" role="img" aria-label="Circle packing of groups and agents"></svg><div id="tip"></div><div id="zoomHint">Hold ctrl or ⌘ while scrolling (or pinch) to zoom</div></div>
+    <div class="legend" id="legend"></div>
+  </section>
+  <aside class="card" id="side">
+    <div class="tabs" id="tabs"></div>
+    <div id="panel"></div>
+  </aside>
+  <section class="card" id="chartsCard">
+    <div class="card-head"><h2>Over time</h2><span>click a chart to jump to a tick · dashed lines are shocks</span></div>
+    <div class="charts" id="charts"></div>
+  </section>
+</main>
+<script>
+const EMBEDDED = /*__RUN_DATA__*/null;
+
+(() => {
+'use strict';
+
+// ------------------------------------------------------------------ helpers
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const isNum = v => typeof v === 'number' && isFinite(v);
+const f2 = v => isNum(v) ? v.toFixed(2) : '–';
+const f3 = v => isNum(v) ? v.toFixed(3) : '–';
+const pct = v => isNum(v) ? Math.round(v * 100) + '%' : '–';
+const fmtN = n => !isNum(n) ? '–' : Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : Math.abs(n) >= 1e4 ? Math.round(n / 1e3) + 'k' : String(Math.round(n * 1000) / 1000);
+const trunc = (s, n) => { s = String(s ?? ''); return n <= 1 ? '' : s.length <= n ? s : s.slice(0, n - 1) + '…'; };
+const idNum = id => +String(id).replace(/^\D+/, '') || 0;
+const byIdNum = (a, b) => idNum(a) - idNum(b) || (a < b ? -1 : a > b ? 1 : 0);
+const isGroupId = id => /^G\d+$/.test(String(id));
+const isAgentId = id => /^A\d+$/.test(String(id));
+const PAL = 12;
+const slotOf = s => ((s % PAL) + PAL) % PAL;
+const supColor = s => s == null ? 'var(--nofocus)' : `var(--s${slotOf(s)})`;
+const TOK = ['deliberation', 'read', 'communication', 'summarize', 'critique', 'custom'];
+const FAM_ORDER = ['connect', 'protocol', 'lab', 'delegate', 'design', 'custom', 'write', 'critique', 'summarize', 'reflect', 'read', 'search', 'analyze', 'intent'];
+const FAM_COLOR = { connect: 'var(--s6)', protocol: 'var(--s4)', lab: 'var(--s0)', delegate: 'var(--s1)', design: 'var(--s2)', custom: 'var(--s9)',
+  write: 'var(--s5)', critique: 'var(--s7)', summarize: 'var(--s3)', reflect: 'var(--s10)', intent: 'var(--line)' };
+const family = op => { op = String(op || ''); if (op.startsWith('x_')) return 'custom'; if (op === 'design_action') return 'design'; return op.split('.')[0]; };
+const famColor = f => FAM_COLOR[f] || 'var(--muted)';
+
+function parseJSON(text) {
+  try { return JSON.parse(text); }
+  catch (e) { return JSON.parse(text.replace(/([:\[,]\s*)-?(?:NaN|Infinity)(?=\s*[,\]}])/g, '$1null')); }
+}
+
+// ------------------------------------------------------------------ state
+let RUN, S, W, AG, MODS, modOfOut, lawByOut, CUS, EV, evByTick, evByAgent, shocks, agentIds, nSuper, T0, TN;
+const st = { i: 0, sel: null, tab: 'inspect', playing: null, showSec: false, showInactive: false, showLinks: true, hl: null,
+  evFam: 'all', evQ: '', evAll: false, evLimit: 300, lawSort: { k: 'test', dir: -1 }, lawQ: '', lawAll: false,
+  actSort: { k: 'adopters', dir: -1 }, actQ: '', openAct: null };
+const treeCache = new Map();
+
+function showPicker() {
+  $('picker').classList.remove('hide');
+  $('file').addEventListener('change', async ev => {
+    const files = [...ev.target.files];
+    const msg = $('pickMsg');
+    const runFile = files.find(f => /\.json$/i.test(f.name)) || files.find(f => !/\.jsonl$/i.test(f.name));
+    const evFile = files.find(f => /\.jsonl$/i.test(f.name));
+    if (!runFile) { msg.textContent = 'Choose the run.json (events.jsonl alone is not enough).'; return; }
+    msg.textContent = 'Loading…';
+    try {
+      const data = parseJSON(await runFile.text());
+      if (!data || !Array.isArray(data.snapshots)) throw new Error('this file has no snapshots; is it a alphateam run.json?');
+      if (evFile) {
+        const lines = (await evFile.text()).split('\n');
+        const evs = [];
+        for (const line of lines) { if (line.trim()) { try { evs.push(JSON.parse(line)); } catch (e) { /* skip a bad line */ } } }
+        data.events = evs;
+      } else delete data.events;
+      $('picker').classList.add('hide');
+      start(data, evFile ? 'jsonl' : 'none');
+    } catch (e) { msg.textContent = 'Could not read it: ' + e.message; }
+  });
+}
+
+function start(data, source) {
+  RUN = data;
+  S = Array.isArray(RUN.snapshots) ? RUN.snapshots : [];
+  if (!S.length) { $('meta').textContent = 'This run has no snapshots.'; return; }
+  W = RUN.world || {};
+  AG = RUN.agents || {};
+  MODS = new Map((W.modules || []).map((m, i) => [m.id ?? i, m]));
+  modOfOut = new Map();
+  for (const m of MODS.values()) for (const o of m.outputs || []) modOfOut.set(+o, m.id);
+  nSuper = W.n_super || (MODS.size ? d3.max([...MODS.values()], m => m.super) + 1 : 0);
+  lawByOut = new Map((W.laws || []).map(l => [+l.output, l]));
+  CUS = new Map((RUN.custom || []).map(c => [c.name, c]));
+  EV = Array.isArray(RUN.events) ? RUN.events : null;
+  evByTick = EV ? d3.group(EV, e => e.t) : new Map();
+  evByAgent = EV ? d3.group(EV, e => e.agent) : new Map();
+  shocks = (W.shocks || []).filter(s => isNum(s.t));
+  const ids = new Set(Object.keys(AG));
+  for (const a of (S[S.length - 1].structure || {}).active || []) ids.add(a);
+  if (!ids.size) for (const s of S) for (const a of (s.structure || {}).active || []) ids.add(a);
+  agentIds = [...ids].sort(byIdNum);
+  T0 = S[0].t; TN = S[S.length - 1].t;
+  st.i = S.length - 1;
+  RUN._source = source;
+  $('app').classList.remove('hide');
+  $('bar').classList.remove('hide');
+  renderHeader();
+  setupControls();
+  setupMap();
+  renderLegend();
+  renderTabs();
+  buildCharts();
+  setT(st.i, false);
+}
+
+// ------------------------------------------------------------------ derived data
+const superOfModule = m => { const x = MODS.get(+m); return x ? x.super : null; };
+const focusOf = (aid, i) => { const f = (S[i].focus || {})[aid]; return f == null ? null : +f; };
+const superOf = (aid, i) => { const m = focusOf(aid, i); return m == null ? null : superOfModule(m); };
+const metric = (i, k) => { const v = (S[i].metrics || {})[k]; return isNum(v) ? v : null; };
+
+function treeAt(i) {
+  const key = i + '|' + (st.showInactive ? 1 : 0);
+  if (treeCache.has(key)) return treeCache.get(key);
+  const str = S[i].structure || {};
+  const groups = str.groups || [];
+  const G = new Map(groups.map(g => [g.id, g]));
+  const parents = new Map();
+  for (const g of groups) for (const m of g.members || []) {
+    if (isGroupId(m) && !G.has(m)) continue;
+    let arr = parents.get(m);
+    if (!arr) parents.set(m, arr = []);
+    if (!arr.includes(g.id)) arr.push(g.id);
+  }
+  const ins = gid => (G.get(gid) || {}).inside || 0;
+  const disp = new Map();
+  for (const g of groups) {
+    const ps = parents.get(g.id);
+    if (ps && ps.length) disp.set(g.id, ps.reduce((b, p) => (ins(p) > ins(b) || (ins(p) === ins(b) && p < b)) ? p : b));
+  }
+  for (const g of groups) { // the kernel forbids cycles; break any anyway so every group stays reachable
+    const seen = new Set([g.id]);
+    let c = g.id, p = disp.get(c);
+    while (p) { if (seen.has(p)) { disp.delete(c); break; } seen.add(p); c = p; p = disp.get(c); }
+  }
+  const active = new Set(str.active || agentIds);
+  const nodes = new Map(groups.map(g => [g.id, { id: g.id, kind: 'group', top: !disp.has(g.id), children: [] }]));
+  const root = { id: '__root', kind: 'root', children: [] };
+  for (const g of groups) { const p = disp.get(g.id); (p ? nodes.get(p) : root).children.push(nodes.get(g.id)); }
+  const una = { id: '__una', kind: 'una', children: [] }, gone = { id: '__gone', kind: 'gone', children: [] };
+  for (const aid of agentIds) {
+    const on = active.has(aid);
+    if (!on && !st.showInactive) continue;
+    const ps = parents.get(aid);
+    const leaf = { id: aid, kind: 'agent', active: on };
+    if (ps && ps.length) {
+      const g = ps.reduce((b, p) => (ins(p) < ins(b) || (ins(p) === ins(b) && p < b)) ? p : b);
+      disp.set(aid, g);
+      nodes.get(g).children.push(leaf);
+    } else (on ? una : gone).children.push(leaf);
+  }
+  if (una.children.length) root.children.push(una);
+  if (gone.children.length) root.children.push(gone);
+  const t = { root, G, parents, disp, active, nUna: una.children.length, nGone: gone.children.length };
+  treeCache.set(key, t);
+  return t;
+}
+
+function agentsInside(G, gid) {
+  const out = new Set(), seen = new Set(), stack = [gid];
+  while (stack.length) {
+    const g = stack.pop();
+    if (seen.has(g)) continue;
+    seen.add(g);
+    const grp = G.get(g);
+    if (!grp) continue;
+    for (const m of grp.members || []) { if (G.has(m)) stack.push(m); else if (!isGroupId(m)) out.add(m); }
+  }
+  return out;
+}
+
+function containersOf(tree, id) {
+  const out = new Set(), stack = [...(tree.parents.get(id) || [])];
+  while (stack.length) { const g = stack.pop(); if (out.has(g)) continue; out.add(g); stack.push(...(tree.parents.get(g) || [])); }
+  return out;
+}
+
+function lifeOf(gid) {
+  let first = null, last = null;
+  S.forEach((s, i) => { if (((s.structure || {}).groups || []).some(g => g.id === gid)) { if (first == null) first = i; last = i; } });
+  return { first, last };
+}
+
+// ------------------------------------------------------------------ header & controls
+function renderHeader() {
+  const m = RUN.meta || {}, cfg = m.config || {}, last = S[S.length - 1].metrics || {};
+  const nAgents = Object.keys(AG).length || m.agents || agentIds.length;
+  $('title').textContent = `AlphaTeam replay · ${m.condition || 'run'}`;
+  document.title = `AlphaTeam Replay · ${m.condition || 'run'}`;
+  const model = m.model ? `${m.backend} · ${m.model}${m.reasoning ? ' (reasoning)' : ''}${m.effort ? ' · effort ' + m.effort : ''}` : (m.backend || 'unknown backend');
+  const parts = [model, `${nAgents} agents`, `${TN} ticks`];
+  if (W.structure) parts.push(`${W.structure} world: ${W.n_out} outputs, ${W.n_in} inputs, ${MODS.size} modules in ${nSuper} super-modules`);
+  if (m.episode && ((cfg.episodes || 1) > 1 || (cfg.population || 1) > 1)) parts.push(`episode ${m.episode}, society ${m.society}`);
+  if (m.inherited) parts.push('inherited culture');
+  if (m.seed != null) parts.push(`seed ${m.seed}`);
+  $('meta').textContent = parts.join(' · ');
+  $('meta').title = m.condition_note || '';
+  const k = [`<span class="hero">hidden score (test R²) <b>${f3(last.score)}</b></span>`,
+    `<span>coverage <b>${pct(last.coverage)}</b></span>`,
+    `<span>structure F1 <b>${f2(last.structure_f1)}</b></span>`,
+    `<span>last validation <b>${f3(last.val)}</b></span>`,
+    `<span>mirror L1/L2 <b>${f2(last.mirror_l1)}</b> / <b>${f2(last.mirror_l2)}</b></span>`,
+    `<span>tokens <b>${fmtN(last.tokens)}</b></span>`];
+  if (isNum(m.cost_usd)) k.push(`<span>cost <b>$${m.cost_usd.toFixed(2)}</b></span>`);
+  $('kpis').innerHTML = k.join('');
+  const b = [];
+  if (m.stopped) b.push(`<div class="banner warn">Stopped early: ${esc(m.stopped)}</div>`);
+  if (m.backend === 'mock') b.push('<div class="banner info">Mock backend: agents follow scripted heuristics. This replay tests the plumbing; it is not emergent behavior.</div>');
+  if (!EV) b.push('<div class="banner info">No events in this file. Open the viewer.html written next to run.json, or pick events.jsonl together with run.json.</div>');
+  $('banners').innerHTML = b.join('');
+}
+
+function setupControls() {
+  const slider = $('tick');
+  slider.max = S.length - 1;
+  slider.oninput = () => setT(+slider.value, true);
+  $('prev').onclick = () => setT(Math.max(0, st.i - 1), true);
+  $('next').onclick = () => setT(Math.min(S.length - 1, st.i + 1), true);
+  $('play').onclick = togglePlay;
+  const span = Math.max(1, S.length - 1);
+  $('marks').innerHTML = shocks.map(s => {
+    const idx = S.findIndex(x => x.t === s.t);
+    if (idx < 0) return '';
+    const what = s.kind === 'shift' ? `shift: super-module ${s.super}'s laws rewritten (${s.outputs} outputs)` : `churn: ${s.removed} agents removed`;
+    return `<span class="mark" data-goto="${idx}" style="left:${(idx / span) * 100}%" title="t${s.t} ${esc(what)}">${esc(String(s.kind)[0])}<span class="rest">${esc(String(s.kind).slice(1))}</span></span>`;
+  }).join('');
+  $('marks').onclick = e => { const m = e.target.closest('[data-goto]'); if (m) setT(+m.dataset.goto, true); };
+  $('theme').onclick = () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+  };
+  $('optSec').onchange = e => { st.showSec = e.target.checked; renderLinks(false); };
+  $('optInactive').onchange = e => { st.showInactive = e.target.checked; renderMap(false); };
+  $('optLinks').onchange = e => { st.showLinks = e.target.checked; renderLinks(false); };
+  $('toPanel').onclick = () => $('side').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.addEventListener('keydown', e => {
+    const tg = e.target;
+    if ((tg.tagName === 'INPUT' && tg.type !== 'range' && tg.type !== 'checkbox') || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT') return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); setT(Math.min(S.length - 1, st.i + 1), true); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); setT(Math.max(0, st.i - 1), true); }
+    else if (e.key === ' ' && tg.tagName !== 'BUTTON') { e.preventDefault(); togglePlay(); }
+  });
+}
+
+function togglePlay() {
+  const btn = $('play');
+  if (st.playing) { clearInterval(st.playing); st.playing = null; btn.textContent = '▶ Play'; return; }
+  if (st.i >= S.length - 1) setT(0, true);
+  btn.textContent = '❚❚ Pause';
+  st.playing = setInterval(() => { if (st.i >= S.length - 1) return togglePlay(); setT(st.i + 1, true); }, 1000);
+}
+
+function setT(i, animate) {
+  st.i = i;
+  $('tick').value = i;
+  const t = S[i].t;
+  const sh = shocks.filter(s => s.t === t).map(s => s.kind === 'shift' ? `shift s${s.super}` : `churn −${s.removed}`);
+  $('tickLabel').innerHTML = `t ${t} / ${TN}${sh.length ? ` <small>${esc(sh.join(', '))}</small>` : ''}`;
+  renderMap(animate);
+  updateCharts();
+  renderPanel();
+}
+
+// ------------------------------------------------------------------ map (circle packing of the display tree)
+let svg, layer, gLinks, gGroups, gAgents, gLabels, zoom, curK = 1, pos = new Map(), labelQueued = false, stageW = 0, stageH = 0, tipNode = null;
+
+function setupMap() {
+  svg = d3.select('#svg');
+  layer = svg.append('g');
+  gGroups = layer.append('g');
+  gLinks = layer.append('g');
+  gAgents = layer.append('g');
+  gLabels = layer.append('g');
+  // a plain wheel scrolls the page; ctrl/cmd + wheel (and trackpad pinch, which arrives as ctrl + wheel) zooms the map
+  zoom = d3.zoom().scaleExtent([0.4, 600])
+    .filter(ev => ev.type === 'wheel' ? (ev.ctrlKey || ev.metaKey) : !ev.ctrlKey && !ev.button)
+    .on('zoom', ev => { layer.attr('transform', ev.transform); curK = ev.transform.k; queueLabels(); });
+  svg.call(zoom).on('dblclick.zoom', null);
+  svg.on('wheel.hint', ev => {
+    if (ev.ctrlKey || ev.metaKey) return;
+    const hint = $('zoomHint');
+    hint.style.display = 'block';
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => { hint.style.display = 'none'; }, 1200);
+  });
+  $('zin').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 1.6);
+  $('zout').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.6);
+  $('zreset').onclick = () => svg.transition().duration(350).call(zoom.transform, d3.zoomIdentity);
+  const tip = $('tip');
+  svg.on('pointermove', ev => {
+    const n = ev.target.__data__;
+    if (!n || !n.data || !['agent', 'group', 'una', 'gone'].includes(n.data.kind)) { tip.style.display = 'none'; tipNode = null; return; }
+    if (n !== tipNode) { tipNode = n; tip.innerHTML = tipHtml(n); }
+    tip.style.display = 'block';
+    const r = $('stage').getBoundingClientRect();
+    let x = ev.clientX - r.left + 14, y = ev.clientY - r.top + 12;
+    if (x + tip.offsetWidth > r.width - 4) x = Math.max(4, ev.clientX - r.left - tip.offsetWidth - 12);
+    if (y + tip.offsetHeight > r.height - 4) y = Math.max(4, ev.clientY - r.top - tip.offsetHeight - 10);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  svg.on('pointerleave', () => { tip.style.display = 'none'; tipNode = null; });
+  svg.on('click', ev => {
+    const n = ev.target.__data__;
+    if (n && n.data && (n.data.kind === 'agent' || n.data.kind === 'group')) select(n.data.id);
+  });
+  svg.on('dblclick', ev => {
+    const n = ev.target.__data__;
+    if (n && n.data && n.data.kind !== 'agent' && n.r) zoomToNode(n);
+    else if (n && n.data && n.parent && n.parent.r) zoomToNode(n.parent);
+  });
+  new ResizeObserver(() => {
+    const el = $('stage');
+    if (el.clientWidth !== stageW || el.clientHeight !== stageH) { renderMap(false); svg.call(zoom.transform, d3.zoomIdentity); }
+  }).observe($('stage'));
+}
+
+function tipHtml(n) {
+  const d = n.data, i = st.i;
+  if (d.kind === 'una') return `<b>Unaffiliated</b><span class="sub">${d.children.length} active agents in no group</span>`;
+  if (d.kind === 'gone') return `<b>Left the society</b><span class="sub">${d.children.length} inactive agents</span>`;
+  const tree = treeAt(i);
+  if (d.kind === 'group') {
+    const g = tree.G.get(d.id) || {};
+    const ps = tree.parents.get(d.id) || [];
+    return `<b>${esc(d.id)}</b> ${esc(trunc(g.name, 60))}<span class="sub">${g.inside} agents inside · depth ${g.depth} · ${(g.members || []).length} direct members${ps.length > 1 ? ` · in ${ps.length} groups` : ''}</span>`;
+  }
+  const m = focusOf(d.id, i), s = m == null ? null : superOfModule(m);
+  const ps = tree.parents.get(d.id) || [];
+  return `<b>${esc(d.id)}</b>${d.active ? '' : ' (inactive)'}<span class="sub"><i class="sw" style="background:${supColor(s)}"></i>${m == null ? 'no recent focus' : `focus m${m} · super-module s${s}`}</span><span class="sub">${ps.length ? 'in ' + ps.map(esc).join(', ') : 'in no group'}</span>`;
+}
+
+function zoomToNode(n) {
+  if (!n || !n.r) return;
+  const k = Math.min(600, Math.max(0.4, Math.min(stageW, stageH) / (2 * n.r) * 0.92));
+  const t = d3.zoomIdentity.translate(stageW / 2, stageH / 2).scale(k).translate(-n.x, -n.y);
+  svg.transition().duration(600).call(zoom.transform, t);
+}
+
+function zoomToId(id) {
+  let n = pos.get(id);
+  if (n && n.data.kind === 'agent' && n.parent && n.parent.depth > 0) n = n.parent;
+  if (n) zoomToNode(n);
+}
+
+function renderMap(animate) {
+  const i = st.i, tree = treeAt(i);
+  const el = $('stage');
+  stageW = el.clientWidth; stageH = el.clientHeight;
+  if (!stageW || !stageH) return;
+  svg.attr('viewBox', `0 0 ${stageW} ${stageH}`);
+  const h = d3.hierarchy(tree.root)
+    .sum(d => d.kind === 'agent' ? 1 : (d.kind === 'group' && !d.children.length ? 0.5 : 0))
+    .sort((a, b) => (b.value - a.value) || (a.data.id < b.data.id ? -1 : 1));
+  const nodes = [];
+  if (h.children && h.children.length) {
+    // Pack in units of one agent radius so padding does not swamp the dots in deep nesting, then scale to fit.
+    d3.pack().radius(d => d.data.kind === 'agent' ? 1 : 1.4).padding(d => d.depth === 0 ? 4 : 0.45)(h);
+    const k = (Math.min(stageW, stageH) / 2 - 6) / h.r, cx = h.x, cy = h.y;
+    h.each(n => { n.x = (n.x - cx) * k + stageW / 2; n.y = (n.y - cy) * k + stageH / 2; n.r *= k; });
+    nodes.push(...h.descendants().slice(1));
+  }
+  pos = new Map(nodes.map(n => [n.data.id, n]));
+  const gNodes = nodes.filter(n => n.data.kind !== 'agent');
+  const aNodes = nodes.filter(n => n.data.kind === 'agent');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dur = animate && !reduce ? 450 : 0;
+  const tr = sel => dur ? sel.transition().duration(dur) : sel.interrupt();
+  const key = n => n.data.id;
+  const enterAt = enter => enter.append('circle').attr('cx', n => n.x).attr('cy', n => n.y).attr('r', 0);
+  const exitOut = exit => dur ? exit.transition().duration(dur).attr('r', 0).remove() : exit.remove();
+
+  const gs = gGroups.selectAll('circle').data(gNodes, key).join(enterAt, u => u, exitOut).order();
+  gs.attr('class', n => `gc k-${n.data.kind}${n.data.top ? ' top' : ''}${n.depth > 3 ? ' deep' : ''}${n.data.id === st.sel ? ' sel' : ''}`);
+  tr(gs).attr('cx', n => n.x).attr('cy', n => n.y).attr('r', n => n.r);
+
+  const hl = st.hl;
+  const as = gAgents.selectAll('circle').data(aNodes, key).join(enterAt, u => u, exitOut).order();
+  as.attr('class', n => {
+    const s = superOf(n.data.id, i);
+    return `dot${n.data.active ? '' : ' inactive'}${hl != null && (s == null || slotOf(s) !== hl) ? ' dim' : ''}${n.data.id === st.sel ? ' sel' : ''}`;
+  }).style('fill', n => supColor(superOf(n.data.id, i)));
+  tr(as).attr('cx', n => n.x).attr('cy', n => n.y).attr('r', n => Math.max(0.6, n.r * 0.88));
+
+  const ls = gLabels.selectAll('text').data(gNodes, key).join(enter => enter.append('text').attr('text-anchor', 'middle').attr('x', n => n.x).attr('y', n => n.y - n.r), u => u, exit => exit.remove());
+  ls.attr('class', n => 'glabel k-' + n.data.kind);
+  tr(ls).attr('x', n => n.x).attr('y', n => n.y - n.r);
+  updateLabels();
+  renderLinks(animate && !reduce);
+
+  const snap = S[i], m = snap.metrics || {};
+  $('mapTitle').textContent = `Organization at t ${snap.t}`;
+  const nGroups = tree.G.size, nTop = [...tree.G.keys()].filter(g => !tree.disp.has(g)).length;
+  $('mapstats').innerHTML = `<b>${tree.active.size}</b> active · <b>${nGroups}</b> groups (<b>${nTop}</b> top-level) · in a group <b>${pct(m.in_group)}</b> · depth <b>${m.depth ?? '–'}</b> · mirror L1 <b>${f2(m.mirror_l1)}</b> · L2 <b>${f2(m.mirror_l2)}</b> · score <b>${f3(m.score)}</b>`;
+}
+
+function labelText(n) {
+  const d = n.data;
+  if (d.kind === 'una') return `unaffiliated · ${d.children.length}`;
+  if (d.kind === 'gone') return `left the society · ${d.children.length}`;
+  const g = treeAt(st.i).G.get(d.id);
+  return g && g.name ? `${g.name}` : d.id;
+}
+
+function queueLabels() {
+  if (labelQueued) return;
+  labelQueued = true;
+  requestAnimationFrame(() => { labelQueued = false; updateLabels(); });
+}
+
+function updateLabels() {
+  const k = curK, shown = [];
+  // labels sit at the top of their circle; skip one that would collide with a label already placed (parents come first)
+  gLabels.selectAll('text').each(function (n) {
+    const px = n.r * k;
+    let ok = n.data.kind !== 'group' || px > 34;
+    let text = '';
+    if (ok) {
+      text = trunc(labelText(n), Math.max(4, Math.floor(px * 1.5 / 6.4)));
+      const w = text.length * 6.4, x0 = n.x * k - w / 2, x1 = x0 + w, y = (n.y - n.r) * k + 14;
+      ok = !shown.some(b => Math.abs(b.y - y) < 13 && x0 < b.x1 && b.x0 < x1);
+      if (ok) shown.push({ x0, x1, y });
+    }
+    if (!ok) { this.setAttribute('display', 'none'); return; }
+    this.removeAttribute('display');
+    this.setAttribute('font-size', 11 / k);
+    this.setAttribute('dy', 14 / k);
+    this.setAttribute('stroke-width', 3 / k);
+    this.textContent = text;
+  });
+}
+
+function renderLinks(animate) {
+  const tree = treeAt(st.i), out = [];
+  for (const [child, ps] of tree.parents) {
+    if (ps.length < 2) continue;
+    const hotChild = child === st.sel;
+    if (!st.showSec && !hotChild && !ps.includes(st.sel)) continue;
+    const a = pos.get(child);
+    if (!a) continue;
+    const shown = tree.disp.get(child);
+    for (const p of ps) {
+      if (p === shown) continue;
+      const b = pos.get(p);
+      if (!b) continue;
+      if (!st.showSec && !hotChild && p !== st.sel) continue;
+      out.push({ id: child + '>' + p, a, b, hot: hotChild || p === st.sel });
+    }
+  }
+  for (const [x, y] of (S[st.i].structure || {}).links || []) {
+    const hot = x === st.sel || y === st.sel;
+    if (!st.showLinks && !hot) continue;
+    const a = pos.get(x), b = pos.get(y);
+    if (a && b) out.push({ id: 'L' + x + '~' + y, a, b, hot, link: true });
+  }
+  const ls = gLinks.selectAll('line').data(out, d => d.id).join(enter => enter.append('line').attr('x1', d => d.a.x).attr('y1', d => d.a.y).attr('x2', d => d.b.x).attr('y2', d => d.b.y));
+  ls.attr('class', d => (d.link ? 'alink' : 'sec') + (d.hot ? ' hot' : ''));
+  (animate ? ls.transition().duration(450) : ls.interrupt()).attr('x1', d => d.a.x).attr('y1', d => d.a.y).attr('x2', d => d.b.x).attr('y2', d => d.b.y);
+}
+
+function markSelection() {
+  gGroups.selectAll('circle').classed('sel', n => n.data.id === st.sel);
+  gAgents.selectAll('circle').classed('sel', n => n.data.id === st.sel);
+  renderLinks(false);
+}
+
+function applyHighlight() {
+  const i = st.i, hl = st.hl;
+  gAgents.selectAll('circle').classed('dim', n => { if (hl == null) return false; const s = superOf(n.data.id, i); return s == null || slotOf(s) !== hl; });
+  $('legend').querySelectorAll('.lg').forEach(x => x.classList.toggle('on', +x.dataset.slot === hl));
+}
+
+function renderLegend() {
+  const slots = Math.min(nSuper, PAL), items = [];
+  for (let c = 0; c < slots; c++) {
+    const sups = [];
+    for (let s = c; s < nSuper; s += PAL) sups.push('s' + s);
+    items.push(`<span class="lg" data-slot="${c}" title="Highlight agents focused on ${sups.join(', ')}"><i class="sw" style="background:var(--s${c})"></i>${trunc(sups.join('/'), 18)}</span>`);
+  }
+  items.push('<span><i class="sw" style="background:var(--nofocus)"></i>no recent focus</span>');
+  items.push('<span class="note">Dot color = super-module the agent worked on recently; if groups mirror the task, circles are single-colored. Click a color to highlight it. Each group sits inside its largest parent; each agent inside its smallest group' + (nSuper > PAL ? `; ${nSuper} super-modules share ${PAL} colors` : '') + '.</span>');
+  $('legend').innerHTML = items.join('');
+  $('legend').onclick = e => {
+    const x = e.target.closest('.lg');
+    if (!x) return;
+    st.hl = st.hl === +x.dataset.slot ? null : +x.dataset.slot;
+    applyHighlight();
+  };
+}
+
+// ------------------------------------------------------------------ selection & side panel
+function select(id) {
+  st.sel = id;
+  st.tab = 'inspect';
+  markSelection();
+  renderTabs();
+  renderPanel();
+  const btn = $('toPanel');
+  btn.classList.toggle('hide', !id);
+  btn.textContent = id ? `Inspect ${id} ↓` : 'Inspect ↓';
+}
+
+const TABS = [['inspect', 'Inspect'], ['events', 'Events'], ['laws', 'Laws'], ['actions', 'Actions'], ['lessons', 'Lessons']];
+function renderTabs() {
+  $('tabs').innerHTML = TABS.map(([k, l]) => `<button data-tab="${k}" class="${st.tab === k ? 'on' : ''}">${l}</button>`).join('');
+}
+$('tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { st.tab = b.dataset.tab; renderTabs(); renderPanel(); } };
+
+function renderPanel() {
+  const p = $('panel');
+  if (st.tab === 'inspect') p.innerHTML = st.sel ? (isGroupId(st.sel) ? inspectGroup(st.sel) : inspectAgent(st.sel)) : overview();
+  else if (st.tab === 'events') renderEvents();
+  else if (st.tab === 'laws') renderLaws();
+  else if (st.tab === 'actions') renderActions();
+  else p.innerHTML = lessons();
+}
+
+const chipG = (gid, G, extra = '') => {
+  const g = G && G.get(gid);
+  return `<span class="chip" data-sel="${esc(gid)}" title="${esc(g ? g.name : gid)}">${esc(gid)}${g && g.name ? ' · ' + esc(trunc(g.name, 26)) : ''}${g ? `<small>${g.inside}</small>` : ''}${extra}</span>`;
+};
+const chipA = (aid, i) => `<span class="chip" data-sel="${esc(aid)}"><i class="sw" style="background:${supColor(superOf(aid, i))}"></i>${esc(aid)}</span>`;
+const chipAny = (id, i, G) => isGroupId(id) ? chipG(id, G) : isAgentId(id) ? chipA(id, i) : `<span class="chip plain">${esc(id)}</span>`;
+const chips = (ids, fn, cap = 160) => ids.slice(0, cap).map(fn).join('') + (ids.length > cap ? `<span class="sub"> +${ids.length - cap} more</span>` : '');
+const outLabel = o => { const m = modOfOut.get(+o); const s = m == null ? null : superOfModule(m); return `<i class="sw" style="background:${supColor(s)}"></i>y${o} <span class="sub">m${m ?? '?'} · s${s ?? '?'}</span>`; };
+
+function purity(agents, i) {
+  const focus = S[i].focus || {};
+  const byMod = new Map();
+  let n = 0;
+  for (const a of agents) { const m = focus[a]; if (m == null) continue; n++; byMod.set(+m, (byMod.get(+m) || 0) + 1); }
+  if (!n) return { n: 0, html: `<div class="sub">None of the ${agents.size} agents inside has a recent focus at this tick.</div>` };
+  const bySup = new Map();
+  for (const [m, c] of byMod) { const s = superOfModule(m); const e = bySup.get(s) || { s, c: 0, mods: [] }; e.c += c; e.mods.push({ m, c }); bySup.set(s, e); }
+  const sups = [...bySup.values()].sort((a, b) => b.c - a.c);
+  const segs = [];
+  for (const e of sups) for (const x of e.mods.sort((a, b) => b.c - a.c)) segs.push({ ...x, s: e.s });
+  const topM = [...byMod].sort((a, b) => b[1] - a[1])[0];
+  const html = `<div class="pbar" role="img" aria-label="focus modules of agents inside">${segs.map(x => `<span style="flex:${x.c} 0 0;background:${supColor(x.s)}" title="m${x.m} (super-module s${x.s}): ${x.c} agent${x.c > 1 ? 's' : ''}"></span>`).join('')}</div>
+    <div class="sub">${n} of ${agents.size} agents inside have a recent focus · ${byMod.size} module${byMod.size > 1 ? 's' : ''} · top module m${topM[0]} ${pct(topM[1] / n)} · top super-module s${sups[0].s} ${pct(sups[0].c / n)}</div>`;
+  return { n, html, top: topM[1] / n, topSup: sups[0].c / n };
+}
+
+function overview() {
+  const i = st.i, tree = treeAt(i), snap = S[i];
+  const tops = [...tree.G.values()].filter(g => !tree.disp.has(g.id)).sort((a, b) => b.inside - a.inside || byIdNum(a.id, b.id));
+  const rows = tops.slice(0, 15).map(g => {
+    const p = purity(agentsInside(tree.G, g.id), i);
+    return `<div class="ovr" data-sel="${esc(g.id)}"><span class="nm">${esc(g.id)} · ${esc(trunc(g.name, 48))}</span> <span class="sub">${g.inside} agents · depth ${g.depth}</span>${p.html}</div>`;
+  }).join('');
+  return `<h2>t ${snap.t}: ${tree.active.size} active agents, ${tree.G.size} groups</h2>
+    <p class="sub">Click a circle (or a chip anywhere) to inspect it. Double-click a group to zoom into it; pinch or ctrl/⌘ + scroll to zoom, drag to pan.</p>
+    <h3>Largest top-level groups and what their agents work on</h3>
+    ${rows || '<div class="sub">No groups at this tick.</div>'}
+    ${tops.length > 15 ? `<div class="sub" style="margin-top:6px">+${tops.length - 15} more top-level groups</div>` : ''}
+    ${tree.nUna ? `<h3>Unaffiliated</h3><div class="sub">${tree.nUna} active agents are in no group.</div>` : ''}`;
+}
+
+function inspectGroup(gid) {
+  const i = st.i, tree = treeAt(i), g = tree.G.get(gid);
+  if (!g) {
+    const life = lifeOf(gid);
+    return `<h2>${esc(gid)}</h2><p class="sub">This group does not exist at t ${S[i].t}.</p>` +
+      (life.first != null ? `<p class="sub">It exists from t ${S[life.first].t} to t ${S[life.last].t}.</p><div class="btnrow"><button class="btn" data-goto="${life.first}">go to t ${S[life.first].t}</button><button class="btn" data-goto="${life.last}">go to t ${S[life.last].t}</button></div>` : '<p class="sub">It does not appear in any snapshot (it formed and dissolved within one tick).</p>') + groupEvents(gid);
+  }
+  const ps = tree.parents.get(gid) || [];
+  const shown = tree.disp.get(gid);
+  const members = g.members || [];
+  const subG = members.filter(m => tree.G.has(m)).sort((a, b) => tree.G.get(b).inside - tree.G.get(a).inside);
+  const subA = members.filter(m => !isGroupId(m));
+  const inside = agentsInside(tree.G, gid);
+  const pur = purity(inside, i);
+  const posts = (RUN.group_posts || {})[gid];
+  const postList = (arr, label) => arr && arr.length ? `<div class="sub" style="margin-top:6px">${label}</div>` + arr.map(x => `<div class="post">${esc(x)}</div>`).join('') : '';
+  return `<h2>${esc(g.name || gid)}</h2>
+    <div class="sub">${esc(gid)} · ${g.open ? 'open' : 'closed'} · founded by ${g.founder ? `<span class="chip" data-sel="${esc(g.founder)}">${esc(g.founder)}</span>` : '?'} at t ${g.created ?? '?'}</div>
+    <div class="btnrow"><button class="btn" data-zoom="${esc(gid)}">zoom to it</button></div>
+    <h3>Purpose</h3><div class="txt">${esc(g.purpose || '(none)')}</div>
+    <h3>Protocol</h3><div class="txt">${esc(g.protocol || '(none)')}</div>
+    <div class="kv" style="margin-top:12px">
+      <div>agents inside</div><div><b>${g.inside}</b> (at any depth)</div>
+      <div>depth</div><div>${g.depth}</div>
+      <div>delegates</div><div>${(g.delegates || []).length ? chips(g.delegates, d => chipAny(d, i, tree.G)) : 'none (any member may act for it)'}</div>
+      <div>parents</div><div>${ps.length ? chips(ps, p => chipG(p, tree.G, p === shown && ps.length > 1 ? ' <small>drawn here</small>' : '')) : 'none (top level)'}</div>
+    </div>
+    <h3>Module purity of the agents inside</h3>${pur.html}
+    <h3>Direct members (${members.length})</h3>
+    ${subG.length ? `<div class="sub">groups</div><div>${chips(subG, m => chipG(m, tree.G))}</div>` : ''}
+    ${subA.length ? `<div class="sub" style="margin-top:4px">agents</div><div>${chips(subA, a => chipA(a, i))}</div>` : ''}
+    <h3>Latest posts</h3>
+    <div class="sub">From the end of the run (t ${TN}), not this tick.</div>
+    ${posts ? (postList(posts.pub, 'public board') + postList(posts.mem, 'members board')) || '<div class="sub">No posts.</div>' : '<div class="sub">None recorded: the group was not active at the end of the run.</div>'}
+    ${groupEvents(gid)}`;
+}
+
+function groupEvents(gid) {
+  if (!EV) return '';
+  const hit = EV.filter(e => e.target === gid || e.target === 'mem:' + gid || e.target === 'pub:' + gid || (e.args && (e.args.target === gid || e.args.group === gid || e.args.as === gid)));
+  if (!hit.length) return `<h3>${EV_LABEL()} involving it</h3><div class="sub">None.</div>`;
+  const now = S[st.i].t;
+  return `<h3>${EV_LABEL()} involving it (${hit.length})</h3>` + hit.slice(-150).reverse().map(e => evRow(e, true, e.t === now)).join('');
+}
+
+const EV_LABEL = () => RUN._source === 'jsonl' ? 'Events' : 'Sampled events';
+
+function inspectAgent(aid) {
+  const i = st.i, tree = treeAt(i), snap = S[i], a = AG[aid] || {};
+  const on = tree.active.has(aid);
+  const m = focusOf(aid, i), s = m == null ? null : superOfModule(m);
+  const direct = (tree.parents.get(aid) || []).slice().sort((x, y) => tree.G.get(x).inside - tree.G.get(y).inside);
+  const all = [...containersOf(tree, aid)].filter(g => !direct.includes(g)).sort((x, y) => tree.G.get(y).inside - tree.G.get(x).inside);
+  const follows = ((snap.structure || {}).follows || {})[aid] || [];
+  let followers = 0;
+  for (const fs of Object.values((snap.structure || {}).follows || {})) if (fs.includes(aid)) followers++;
+  const linked = ((snap.structure || {}).links || []).filter(p => p.includes(aid)).map(p => p[0] === aid ? p[1] : p[0]);
+  const inst = a.instruments || (W.instruments || {})[aid] || [];
+  const laws = (W.laws || []).filter(l => l.author === aid);
+  const evs = evByAgent.get(aid) || [];
+  return `<h2>${esc(aid)}</h2>
+    <div class="sub">${on ? 'active' : 'inactive (left the society)'} at t ${snap.t} · <i class="sw" style="background:${supColor(s)}"></i>${m == null ? 'no recent focus' : `recent focus: module m${m}, super-module s${s}`}</div>
+    <div class="btnrow"><button class="btn" data-zoom="${esc(aid)}">zoom to it</button></div>
+    <h3>Instruments</h3>
+    ${inst.length ? inst.map(o => { const l = lawByOut.get(+o); return `<div>${outLabel(o)} <span class="sub">· ${l ? `law by ${esc(l.author)}, test R² ${f2(l.test)}` : 'no law'}</span></div>`; }).join('') : '<div class="sub">none</div>'}
+    <h3>Groups at t ${snap.t}</h3>
+    ${direct.length ? `<div class="sub">direct (drawn inside the smallest)</div><div>${chips(direct, g => chipG(g, tree.G))}</div>` : '<div class="sub">In no group.</div>'}
+    ${all.length ? `<div class="sub" style="margin-top:4px">also inside, through nesting (${all.length})</div><div>${chips(all, g => chipG(g, tree.G), 40)}</div>` : ''}
+    <div class="kv" style="margin-top:12px">
+      <div>follows</div><div>${follows.length ? chips(follows, f => chipAny(f, i, tree.G), 30) : 'nobody'}</div>
+      <div>followers</div><div>${followers}</div>
+      <div>links</div><div>${linked.length ? chips(linked, f => chipAny(f, i, tree.G), 30) : 'none'}</div>
+      <div>track record</div><div>${esc(a.record || 'no validated laws')}</div>
+      <div>tokens</div><div>${fmtN(a.tokens)} <span class="sub">(whole run)</span></div>
+      <div>experiments</div><div>${a.experiments ?? (W.experiments_used || {})[aid] ?? '–'} used <span class="sub">(whole run)</span></div>
+      <div>custom actions</div><div>${(a.actions || []).length ? a.actions.map(x => `<span class="chip" data-act="${esc(x)}">x_${esc(x)}</span>`).join('') : 'none adopted'}</div>
+    </div>
+    ${laws.length ? `<h3>Laws it authored (final)</h3>${laws.map(l => `<div>${outLabel(l.output)} <span class="sub">t${l.tick} · test ${f2(l.test)} · val ${f2(l.val)}</span></div>`).join('')}` : ''}
+    <h3>Notes (final)</h3>
+    ${(a.notes || []).length ? a.notes.map(n => `<div class="txt">${esc(n)}</div>`).join('') : '<div class="sub">none</div>'}
+    <h3>${EV_LABEL()} (${evs.length})</h3>
+    ${!EV ? '<div class="sub">No events in this file.</div>' : evs.length ? evs.slice().sort((x, y) => (x.t === snap.t ? -1 : 0) - (y.t === snap.t ? -1 : 0) || y.t - x.t).slice(0, 200).map(e => evRow(e, true, e.t === snap.t)).join('') : '<div class="sub">None sampled for this agent.</div>'}`;
+}
+
+// ------------------------------------------------------------------ events
+function targetLink(t) {
+  t = String(t);
+  let m;
+  if ((m = t.match(/^(mem|pub):(G\d+)$/))) return `<span class="tg" data-sel="${m[2]}">${esc(t)}</span>`;
+  if (isGroupId(t) || isAgentId(t)) return `<span class="tg" data-sel="${esc(t)}">${esc(t)}</span>`;
+  if (/^y\d+$/.test(t)) return `<span class="tg" data-law="${esc(t)}">${esc(t)}</span>`;
+  if (CUS.has(t)) return `<span class="tg" data-act="${esc(t)}">x_${esc(t)}</span>`;
+  return esc(t);
+}
+
+function evRow(e, showT, now) {
+  const fam = family(e.op);
+  const args = e.args && Object.keys(e.args).length ? `<div class="args">${Object.entries(e.args).map(([k, v]) => `<div><b>${esc(k)}</b> ${esc(v)}</div>`).join('')}</div>` : '';
+  return `<div class="ev${e.ok ? '' : ' fail'}${e.op === 'intent' ? ' intent' : ''}${now ? ' now' : ''}" style="--fam:${famColor(fam)}"><span class="op">${esc(e.op)}</span><div>` +
+    `<span class="who" data-sel="${esc(e.agent)}">${esc(e.agent)}</span>${e.target ? ' → ' + targetLink(e.target) : ''}${e.via ? ` <span class="sub">via x_${esc(e.via)}</span>` : ''}${showT ? ` <span class="sub">t${e.t}</span>` : ''}${e.ok ? '' : ' <span class="bad">refused</span>'}` +
+    `<div class="msg">${esc(e.msg)}</div>${args}</div></div>`;
+}
+
+function evText(e) {
+  if (e._s == null) e._s = [e.agent, e.op, e.target, e.via, e.msg, ...Object.values(e.args || {})].join(' ').toLowerCase();
+  return e._s;
+}
+
+function renderEvents() {
+  const p = $('panel');
+  if (!EV) { p.innerHTML = '<h2>Events</h2><p class="sub">This file has no events. A viewer.html written by a run embeds a per-tick sample; when opening run.json by hand, select events.jsonl from the same folder too.</p>'; return; }
+  const t = S[st.i].t;
+  const scope = st.evAll ? EV : (evByTick.get(t) || []);
+  const counts = d3.rollup(scope, v => v.length, e => family(e.op));
+  const fams = [...counts.keys()].sort((a, b) => ((FAM_ORDER.indexOf(a) + 1) || 99) - ((FAM_ORDER.indexOf(b) + 1) || 99) || (a < b ? -1 : 1));
+  if (st.evFam !== 'all' && !counts.has(st.evFam)) st.evFam = 'all';
+  const note = RUN._source === 'jsonl' ? 'All events from events.jsonl.' : 'A sample: every structural event (connect, protocol, design, delegate, lab.publish, critique, summarize; up to 240 per tick) plus up to 120 others per tick.';
+  p.innerHTML = `<div class="tools"><input class="search" id="evQ" type="search" placeholder="Search agent, op, target, text…" value="${esc(st.evQ)}">
+      <label><input type="checkbox" id="evAll"${st.evAll ? ' checked' : ''}> all ticks</label></div>
+    <div class="fams"><span class="chip${st.evFam === 'all' ? ' on' : ''}" data-fam="all">all <small>${scope.length}</small></span>${fams.map(f => `<span class="chip${st.evFam === f ? ' on' : ''}" data-fam="${esc(f)}"><i class="sq" style="background:${famColor(f)}"></i>${esc(f)}<small>${counts.get(f)}</small></span>`).join('')}</div>
+    <div class="sub">${note} Click a row for its arguments.</div>
+    <div id="evList"></div>`;
+  $('evQ').oninput = e => { st.evQ = e.target.value; st.evLimit = 300; renderEvList(); };
+  $('evAll').onchange = e => { st.evAll = e.target.checked; st.evLimit = 300; renderEvents(); };
+  renderEvList();
+}
+
+function renderEvList() {
+  const t = S[st.i].t;
+  const scope = st.evAll ? EV : (evByTick.get(t) || []);
+  const q = st.evQ.trim().toLowerCase();
+  const list = scope.filter(e => (st.evFam === 'all' || family(e.op) === st.evFam) && (!q || evText(e).includes(q)));
+  const shown = list.slice(0, st.evLimit);
+  $('evList').innerHTML = `<div class="sub" style="margin:6px 0">${list.length} event${list.length === 1 ? '' : 's'}${st.evAll ? '' : ` at t ${t}`}</div>` +
+    shown.map(e => evRow(e, st.evAll, false)).join('') +
+    (list.length > shown.length ? `<div class="btnrow"><button class="btn" data-more="1">show ${Math.min(300, list.length - shown.length)} more</button></div>` : '');
+}
+
+// ------------------------------------------------------------------ laws
+function sorter(k, dir) {
+  return (a, b) => {
+    const va = a[k], vb = b[k], na = va == null, nb = vb == null;
+    if (na || nb) return na - nb;
+    return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+  };
+}
+const th = (k, label, s, cls = '') => `<th data-sort="${k}" class="${cls}">${label}${s.k === k ? (s.dir < 0 ? ' ▾' : ' ▴') : ''}</th>`;
+
+function lawRows() {
+  const truth = W.truth || {};
+  let rows = (W.laws || []).map(l => ({ ...l, output: +l.output, sup: superOfModule(l.module), truth: truth[String(l.output)] }));
+  if (st.lawAll) {
+    const have = new Set(rows.map(r => r.output));
+    for (let o = 1; o <= (W.n_out || 0); o++) if (!have.has(o)) { const m = modOfOut.get(o); rows.push({ output: o, module: m, sup: m == null ? null : superOfModule(m), test: null, val: null, author: null, group: null, tick: null, formula: null, truth: truth[String(o)] }); }
+  }
+  const q = st.lawQ.trim().toLowerCase();
+  if (q) rows = rows.filter(r => {
+    if (/^y\d+$/.test(q)) return `y${r.output}` === q;
+    if (/^m\d+$/.test(q)) return `m${r.module}` === q;
+    if (/^s\d+$/.test(q)) return `s${r.sup}` === q;
+    if (/^[ag]\d+$/.test(q)) return String(r.author).toLowerCase() === q || String(r.group).toLowerCase() === q;
+    if (/^x\d+$/.test(q)) { const re = new RegExp('\\b' + q + '\\b'); return [r.formula, r.truth].some(x => x && re.test(x.toLowerCase())); }
+    return [r.author, r.group, r.formula, r.truth].some(x => x && String(x).toLowerCase().includes(q));
+  });
+  return rows.sort(sorter(st.lawSort.k, st.lawSort.dir));
+}
+
+function renderLaws() {
+  const p = $('panel');
+  const laws = W.laws || [];
+  const mean = laws.length ? d3.mean(laws, l => l.test) : null;
+  p.innerHTML = `<h2>Laws: ${laws.length} published of ${W.n_out ?? '?'} outputs</h2>
+    <div class="sub">Final state: each output's law at the end of the run against the hidden truth at the end (after any shift shocks). Mean test R² among published ${f3(mean)}; the score counts outputs without a law as 0.</div>
+    <div class="tools" style="margin-top:8px"><input class="search" id="lawQ" type="search" placeholder="Filter: y12, m3, s1, A42, G7, x17…" value="${esc(st.lawQ)}">
+      <label><input type="checkbox" id="lawAll"${st.lawAll ? ' checked' : ''}> include outputs without a law</label></div>
+    <div class="tablewrap" id="lawTable"></div>`;
+  $('lawQ').oninput = e => { st.lawQ = e.target.value; renderLawTable(); };
+  $('lawAll').onchange = e => { st.lawAll = e.target.checked; renderLawTable(); };
+  renderLawTable();
+}
+
+function renderLawTable() {
+  const rows = lawRows(), s = st.lawSort;
+  const G = treeAt(st.i).G;
+  $('lawTable').innerHTML = `<table class="laws"><thead><tr>${th('output', 'out', s)}${th('module', 'module', s)}${th('test', 'test R²', s, 'n')}${th('val', 'val R²', s, 'n')}${th('author', 'author / group', s)}${th('tick', 't', s, 'n')}</tr></thead><tbody>` +
+    rows.slice(0, 600).map(r => `<tr class="r1"><td class="nw">y${r.output}</td><td class="nw"><i class="sw" style="background:${supColor(r.sup)}"></i>m${r.module ?? '?'}<span class="sub"> s${r.sup ?? '?'}</span></td>` +
+      `<td class="n">${f2(r.test)}</td><td class="n">${f2(r.val)}</td>` +
+      `<td>${r.author ? chipAny(r.author, st.i, G) : '–'}${r.group ? chipAny(r.group, st.i, G) : ''}</td><td class="n">${r.tick ?? '–'}</td></tr>` +
+      `<tr class="r2"><td colspan="6"><span class="fl">law</span><code class="f">${esc(r.formula || 'none')}</code><span class="fl">truth</span><code class="f truth">${esc(r.truth || '?')}</code></td></tr>`).join('') +
+    `</tbody></table>${rows.length > 600 ? `<div class="sub">Showing 600 of ${rows.length}; filter to narrow.</div>` : ''}${rows.length ? '' : '<div class="sub" style="padding:8px 0">No matching laws.</div>'}`;
+}
+
+// ------------------------------------------------------------------ actions & lessons
+function renderActions() {
+  const p = $('panel');
+  const all = RUN.custom || [];
+  p.innerHTML = `<h2>Custom actions: ${all.length}</h2>
+    <div class="sub">Final state of the action space. Click a row for its procedure.</div>
+    <div class="tools" style="margin-top:8px"><input class="search" id="actQ" type="search" placeholder="Filter by name, author, text…" value="${esc(st.actQ)}"></div>
+    <div class="tablewrap" id="actTable"></div>`;
+  $('actQ').oninput = e => { st.actQ = e.target.value; renderActTable(); };
+  renderActTable();
+}
+
+function renderActTable() {
+  const q = st.actQ.trim().toLowerCase(), s = st.actSort;
+  const rows = (RUN.custom || []).filter(c => !q || [c.name, 'x_' + c.name, c.author, c.description, c.procedure].some(x => x && String(x).toLowerCase().includes(q))).sort(sorter(s.k, s.dir));
+  $('actTable').innerHTML = rows.length ? `<table class="acts"><thead><tr>${th('name', 'action', s)}${th('author', 'author', s)}${th('version', 'v', s, 'n')}${th('adopters', 'adopters', s, 'n')}${th('uses', 'uses', s, 'n')}${th('created', 't', s, 'n')}</tr></thead><tbody>` +
+    rows.slice(0, 500).map(c => `<tr class="r1" data-open-act="${esc(c.name)}" style="cursor:pointer"><td class="mono">x_${esc(c.name)}</td><td>${isAgentId(c.author) ? chipA(c.author, st.i) : esc(c.author)}</td><td class="n">${c.version ?? '–'}</td><td class="n">${c.adopters ?? '–'}</td><td class="n">${c.uses ?? '–'}</td><td class="n">${c.created ?? '–'}</td></tr>` +
+      `<tr class="r2" data-open-act="${esc(c.name)}" style="cursor:pointer"><td colspan="6">${esc(c.description)}` +
+      (st.openAct === c.name ? `<div class="sub" style="margin-top:4px">procedure</div><div class="txt">${esc(c.procedure || '')}</div><div class="sub">params: ${esc((c.params || []).join(', ') || 'none')}</div>` : '') + `</td></tr>`).join('') +
+    `</tbody></table>${rows.length > 500 ? `<div class="sub">Showing 500 of ${rows.length}.</div>` : ''}` : '<div class="sub" style="padding:8px 0">No custom actions.</div>';
+}
+
+function lessons() {
+  const m = RUN.meta || {}, cfg = m.config || {};
+  const tasks = RUN.tasks || [];
+  const tstat = d3.rollup(tasks, v => v.length, t => t.status);
+  return `<h2>Organizational lessons</h2>
+    <div class="sub" style="margin-bottom:6px">Written by the society's retrospective at the end of the run.</div>
+    <pre class="lessons">${esc(m.lessons || (m.stopped ? '(none: the run stopped early)' : '(none)'))}</pre>
+    <h3>Condition</h3><div class="txt">${esc(m.condition || '?')}: ${esc(m.condition_note || '')}</div>
+    ${tasks.length ? `<h3>Delegated tasks (final)</h3><div class="sub">${tasks.length} tasks: ${[...tstat].map(([k, v]) => `${esc(k)} ${v}`).join(' · ')}</div>` : ''}
+    <h3>Configuration</h3>
+    <div class="kv">${Object.entries(cfg).map(([k, v]) => `<div>${esc(k)}</div><div class="mono">${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</div>`).join('')}</div>`;
+}
+
+// panel-wide click handling (one listener; panel content is re-rendered freely)
+$('panel').addEventListener('click', e => {
+  const el = e.target.closest('[data-sel],[data-sort],[data-goto],[data-zoom],[data-law],[data-act],[data-fam],[data-more],[data-open-act],.ev');
+  if (!el) return;
+  const d = el.dataset;
+  if (d.sel) { select(d.sel); return; }
+  if (d.goto) { setT(+d.goto, true); return; }
+  if (d.zoom) { zoomToId(d.zoom); if (matchMedia('(max-width: 900px)').matches) $('mapCard').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (d.law) { st.tab = 'laws'; st.lawQ = d.law; renderTabs(); renderPanel(); return; }
+  if (d.act) { st.tab = 'actions'; st.actQ = 'x_' + d.act; st.openAct = d.act; renderTabs(); renderPanel(); return; }
+  if (d.fam) { st.evFam = d.fam; st.evLimit = 300; renderEvents(); return; }
+  if (d.more) { st.evLimit += 300; renderEvList(); return; }
+  if (d.sort) {
+    const s = st.tab === 'laws' ? st.lawSort : st.actSort;
+    if (s.k === d.sort) s.dir = -s.dir; else { s.k = d.sort; s.dir = ['output', 'module', 'name', 'author', 'tick', 'created'].includes(d.sort) ? 1 : -1; }
+    st.tab === 'laws' ? renderLawTable() : renderActTable();
+    return;
+  }
+  if (d.openAct) { st.openAct = st.openAct === d.openAct ? null : d.openAct; renderActTable(); return; }
+  if (el.classList.contains('ev')) el.classList.toggle('open');
+});
+
+// ------------------------------------------------------------------ charts
+const CHARTS = [
+  { title: 'Science', note: 'score = hidden test R² (outputs without a law count 0)', series: [['score', 'score'], ['coverage', 'coverage'], ['val', 'validation']], domain: [0, 1], fmt: f2 },
+  { title: 'Mirroring', note: 'P(share group | same module) − P(… | different); 1 = groups follow the task', series: [['mirror_l1', 'L1 group↔module'], ['mirror_l2', 'L2 superagent↔super-module']], domain: [0, 1], fmt: f2 },
+  { title: 'Groups', series: [['groups', 'groups'], ['supergroups', 'supergroups']], fmt: fmtN },
+  { title: 'Nesting depth', series: [['depth', 'depth']], fmt: fmtN },
+  { title: 'Agents in a group', series: [['in_group', 'share in ≥1 group']], domain: [0, 1], fmt: pct },
+  { title: 'Memberships per agent', series: [['memberships', 'mean direct memberships']], fmt: f2 },
+  { title: 'Changes per tick', series: [['reorganizations', 'reorganizations'], ['protocol_changes', 'protocol changes']], fmt: fmtN },
+  { title: 'Tokens per tick', note: 'stacked by category', stacked: true, series: TOK.map(c => ['tok_' + c, c]), fmt: fmtN },
+  { title: 'Expertise', note: 'correlation of validated record with followers + delegate roles', series: [['expertise', 'r']], domain: [-1, 1], fmt: f2 },
+];
+
+let chartsW = 0;
+function buildCharts() {
+  const host = $('charts');
+  host.innerHTML = CHARTS.map((c, j) => `<div class="chart" data-j="${j}"><div class="ch-title">${esc(c.title)}</div>${c.note ? `<div class="ch-note">${esc(c.note)}</div>` : ''}<div class="ch-legend"></div><svg></svg></div>`).join('');
+  CHARTS.forEach((spec, j) => drawChart(host.children[j], spec));
+  chartsW = host.clientWidth;
+  updateCharts();
+}
+new ResizeObserver(() => { const w = $('charts').clientWidth; if (S && S.length && w && Math.abs(w - chartsW) > 2) { clearTimeout(buildCharts._t); buildCharts._t = setTimeout(buildCharts, 120); } }).observe($('charts'));
+
+function drawChart(card, spec) {
+  const svgEl = d3.select(card.querySelector('svg'));
+  const w = Math.max(180, card.clientWidth), h = 116, mg = { l: 34, r: 6, t: 6, b: 18 };
+  const ts = S.map(s => s.t);
+  const x = d3.scaleLinear().domain(ts.length > 1 ? [ts[0], ts[ts.length - 1]] : [ts[0] - 1, ts[0] + 1]).range([mg.l, w - mg.r]);
+  let lo, hi;
+  if (spec.stacked) { lo = 0; hi = d3.max(S, (s, i) => d3.sum(spec.series, ([k]) => metric(i, k) || 0)) || 1; }
+  else {
+    const vals = [];
+    S.forEach((s, i) => spec.series.forEach(([k]) => { const v = metric(i, k); if (v != null) vals.push(v); }));
+    lo = Math.min(0, d3.min(vals) ?? 0); hi = d3.max(vals) ?? 1;
+    if (spec.domain) { lo = Math.min(lo, spec.domain[0]); hi = Math.max(hi, spec.domain[1]); }
+    if (hi <= lo) hi = lo + 1;
+  }
+  const y = d3.scaleLinear().domain([lo, hi]).nice(3).range([h - mg.b, mg.t]);
+  svgEl.attr('viewBox', `0 0 ${w} ${h}`).attr('height', h).selectAll('*').remove();
+  const yt = y.ticks(3);
+  const yfmt = hi - lo <= 2 ? d3.format('.1f') : d3.format('~s');
+  svgEl.append('g').attr('class', 'grid').selectAll('line').data(yt).join('line').attr('x1', mg.l).attr('x2', w - mg.r).attr('y1', y).attr('y2', y);
+  if (lo < 0) svgEl.append('line').attr('class', 'zero').attr('x1', mg.l).attr('x2', w - mg.r).attr('y1', y(0)).attr('y2', y(0));
+  svgEl.append('g').attr('class', 'ax').selectAll('text').data(yt).join('text').attr('x', mg.l - 5).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').text(yfmt);
+  const xt = x.ticks(Math.max(2, Math.min(ts.length, Math.floor(w / 42)))).filter(Number.isInteger);
+  svgEl.append('g').attr('class', 'ax').selectAll('text').data(xt).join('text').attr('x', x).attr('y', h - 4).attr('text-anchor', 'middle').text(d => d);
+  svgEl.append('g').selectAll('line').data(shocks).join('line').attr('class', 'shock').attr('x1', d => x(d.t)).attr('x2', d => x(d.t)).attr('y1', mg.t).attr('y2', h - mg.b);
+  if (spec.stacked) {
+    const rows = S.map((s, i) => Object.assign({ t: s.t }, Object.fromEntries(spec.series.map(([k]) => [k, metric(i, k) || 0]))));
+    const stack = d3.stack().keys(spec.series.map(([k]) => k))(rows);
+    const area = d3.area().x(d => x(d.data.t)).y0(d => y(d[0])).y1(d => y(d[1])).curve(d3.curveMonotoneX);
+    svgEl.append('g').selectAll('path').data(stack).join('path').attr('d', area).style('fill', (d, j) => `var(--s${j})`).style('fill-opacity', 0.85).style('stroke', 'var(--panel)').style('stroke-width', 0.8);
+  } else {
+    spec.series.forEach(([k], j) => {
+      const pts = S.map((s, i) => ({ t: s.t, v: metric(i, k) }));
+      const line = d3.line().defined(d => d.v != null).x(d => x(d.t)).y(d => y(d.v));
+      svgEl.append('path').attr('class', 'ln').attr('d', line(pts)).style('stroke', `var(--s${j})`);
+      const lone = pts.filter((d, i) => d.v != null && (i === 0 || pts[i - 1].v == null) && (i === pts.length - 1 || pts[i + 1].v == null));
+      svgEl.append('g').selectAll('circle').data(lone).join('circle').attr('cx', d => x(d.t)).attr('cy', d => y(d.v)).attr('r', 2.6).style('fill', `var(--s${j})`);
+    });
+  }
+  const now = svgEl.append('line').attr('class', 'now').attr('y1', mg.t).attr('y2', h - mg.b);
+  const hov = svgEl.append('line').attr('class', 'hov').attr('y1', mg.t).attr('y2', h - mg.b).style('display', 'none');
+  const legend = card.querySelector('.ch-legend');
+  const readout = (idx, hovering) => {
+    const parts = spec.series.map(([k, label], j) => `<span><i class="sq" style="background:var(--s${j})"></i>${esc(label)} <b>${spec.fmt(metric(idx, k))}</b></span>`);
+    if (spec.stacked) parts.unshift(`<span>total <b>${fmtN(d3.sum(spec.series, ([k]) => metric(idx, k) || 0))}</b></span>`);
+    legend.innerHTML = (hovering ? `<span><b>t ${S[idx].t}</b></span>` : '') + parts.join('');
+  };
+  const nearest = px => Math.max(0, Math.min(S.length - 1, d3.bisectCenter(ts, x.invert(px))));
+  svgEl.append('rect').attr('class', 'hit').attr('x', mg.l - 6).attr('y', 0).attr('width', w - mg.l - mg.r + 12).attr('height', h)
+    .on('pointermove', ev => { const idx = nearest(d3.pointer(ev)[0]); hov.style('display', null).attr('x1', x(ts[idx])).attr('x2', x(ts[idx])); readout(idx, true); })
+    .on('pointerleave', () => { hov.style('display', 'none'); readout(st.i, false); })
+    .on('click', ev => setT(nearest(d3.pointer(ev)[0]), true));
+  spec.update = () => { const xv = x(S[st.i].t); now.attr('x1', xv).attr('x2', xv); readout(st.i, false); };
+}
+
+function updateCharts() { for (const c of CHARTS) if (c.update) c.update(); }
+
+// ------------------------------------------------------------------ entry (last, so every declaration above is initialized)
+if (EMBEDDED && typeof EMBEDDED === 'object') start(EMBEDDED, 'embedded');
+else showPicker();
+
+})();
+</script>
+</body>
+</html>

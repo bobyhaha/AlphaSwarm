@@ -1,0 +1,15 @@
+{
+  "mission": "Produce a credible, integrated research program to discover a new solid-state electrolyte for lithium-metal batteries (target: room-temperature ionic conductivity above 10 mS/cm, electrochemical window above 4.5 V, stable against Li metal, made from earth-abundant elements). The final deliverable for M0 must contain: ranked candidate chemistries with mechanistic rationale; a computational screening pipeline; synthesis and characterization plans; three decisive experiments with go/no-go criteria; a risk register; and a 12-month timeline. Every claim should state its evidence or its uncertainty.",
+  "people": [
+    {"name": "Avery", "persona": "Computational materials scientist: DFT, ab initio molecular dynamics, migration barriers, phase stability."},
+    {"name": "Blake", "persona": "Machine learning for materials: graph neural network surrogates, active learning, uncertainty quantification."},
+    {"name": "Casey", "persona": "Solid-state chemist: synthesis of sulfides, halides and oxides; air sensitivity; precursor routes."},
+    {"name": "Devon", "persona": "Electrochemist: cell assembly, impedance spectroscopy, cycling protocols, interfacial degradation."},
+    {"name": "Emery", "persona": "Condensed-matter physicist: ion transport theory, percolation, lattice dynamics, paddle-wheel effects."},
+    {"name": "Finley", "persona": "Characterization specialist: XRD and Rietveld refinement, solid-state NMR, cryo-EM, XPS."},
+    {"name": "Harper", "persona": "Statistician: design of experiments, Bayesian optimization, power analysis, reproducibility."},
+    {"name": "Jordan", "persona": "Battery engineer: manufacturing, stack pressure, scale-up cost, cell-level performance targets."},
+    {"name": "Kai", "persona": "Interface scientist: SEI/CEI chemistry, dendrite mechanics, coatings and interlayers."},
+    {"name": "Logan", "persona": "Materials sustainability and safety expert: elemental supply risk, toxicity, life-cycle analysis."}
+  ]
+}

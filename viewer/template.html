@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Society Replay</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1c1c1f; --muted: #6a6a72; --line: #e3e1db; --soft: #efede8;
+  --accent: #2f6fe0; --warn-bg: #fff4dc; --warn-ink: #7a5300;
+  --team1: rgba(47,111,224,.06); --team2: rgba(124,92,255,.07); --team3: rgba(20,158,142,.08); --team4: rgba(225,155,47,.09);
+  --stroke1: #9db8ea; --stroke2: #b8a8f5; --stroke3: #8fd3c9; --stroke4: #ecc68a;
+  --c-connect: #7c5cff; --c-plan: #2f7de1; --c-write: #13998a; --c-summarize: #d98d1c; --c-reflect: #dc4b57;
+  --c-share: #3f9e4a; --c-design: #bf3fc7; --c-read: #9a9aa2; --c-idle: #d4d1c9;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131315; --panel: #1b1b1e; --ink: #ececf0; --muted: #9b9ba4; --line: #2d2d33; --soft: #232327;
+    --accent: #6d9cf5; --warn-bg: #3a2f17; --warn-ink: #f2cf86;
+    --team1: rgba(109,156,245,.08); --team2: rgba(160,140,255,.09); --team3: rgba(60,200,180,.08); --team4: rgba(240,180,90,.09);
+    --stroke1: #3f5f99; --stroke2: #5b4d9c; --stroke3: #2f7d72; --stroke4: #8a6a33; --c-idle: #4a4a52;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131315; --panel: #1b1b1e; --ink: #ececf0; --muted: #9b9ba4; --line: #2d2d33; --soft: #232327;
+  --accent: #6d9cf5; --warn-bg: #3a2f17; --warn-ink: #f2cf86;
+  --team1: rgba(109,156,245,.08); --team2: rgba(160,140,255,.09); --team3: rgba(60,200,180,.08); --team4: rgba(240,180,90,.09);
+  --stroke1: #3f5f99; --stroke2: #5b4d9c; --stroke3: #2f7d72; --stroke4: #8a6a33; --c-idle: #4a4a52;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; }
+button, select, input { font: inherit; color: inherit; }
+header { padding: 14px 20px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.title-row { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+.meta { color: var(--muted); font-size: 12.5px; }
+.mission { margin: 6px 0 0; color: var(--muted); font-size: 13px; max-width: 1100px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.mission.open { -webkit-line-clamp: unset; }
+.banner { margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: var(--warn-bg); color: var(--warn-ink); font-size: 12.5px; }
+.controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.controls button { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.controls button:hover { border-color: var(--muted); }
+#tick { flex: 1; min-width: 160px; accent-color: var(--accent); }
+#tickLabel { font-variant-numeric: tabular-nums; min-width: 70px; font-weight: 600; }
+.controls label { color: var(--muted); font-size: 12.5px; display: inline-flex; gap: 5px; align-items: center; }
+.controls select { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 2px 6px; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 430px; height: calc(100vh - 150px); min-height: 520px; }
+#stage { position: relative; overflow: hidden; }
+#stage svg { width: 100%; height: 100%; display: block; }
+.legend { position: absolute; left: 12px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); background: color-mix(in srgb, var(--bg) 85%, transparent); padding: 6px 8px; border-radius: 6px; max-width: calc(100% - 24px); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.stats { position: absolute; right: 12px; top: 10px; display: flex; gap: 14px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--bg) 85%, transparent); padding: 6px 10px; border-radius: 6px; }
+.stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+aside { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { flex: 1; border: 0; background: none; padding: 9px 6px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; white-space: nowrap; }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+#panel { overflow-y: auto; padding: 14px 16px 30px; flex: 1; }
+h2 { font-size: 15px; margin: 0 0 2px; }
+h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; font-weight: 600; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.chip { display: inline-block; padding: 1px 7px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); font-size: 12px; margin: 2px 3px 2px 0; cursor: pointer; }
+.chip:hover { border-color: var(--muted); }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 3px 8px; font-size: 13px; }
+.kv div:nth-child(odd) { color: var(--muted); }
+.entry { border-left: 3px solid var(--line); padding: 3px 0 3px 9px; margin: 7px 0; font-size: 13px; }
+.entry .h { color: var(--muted); font-size: 11.5px; }
+.entry .b { white-space: pre-wrap; word-break: break-word; }
+.entry.k-summary { border-left-color: var(--c-summarize); } .entry.k-critique { border-left-color: var(--c-reflect); }
+.entry.k-reflection { border-left-color: var(--c-reflect); } .entry.k-plan, .entry.k-decision { border-left-color: var(--c-plan); }
+.entry.k-result, .entry.k-data { border-left-color: var(--c-write); } .entry.k-proposal { border-left-color: var(--c-connect); }
+.ev { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 5px 0; border-bottom: 1px solid var(--soft); font-size: 12.5px; }
+.ev .op { font-size: 11px; padding: 1px 6px; border-radius: 4px; color: #fff; white-space: nowrap; align-self: start; margin-top: 2px; }
+.ev.fail { opacity: .55; } .ev.fail .msg { text-decoration: line-through; }
+.ev .who { font-weight: 600; cursor: pointer; } .ev .msg { color: var(--muted); word-break: break-word; }
+.ev.intent .msg { font-style: italic; color: var(--ink); }
+.status { font-size: 11px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); }
+.status.done { background: #2e9e57; color: #fff; border-color: #2e9e57; } .status.submitted { background: #d98d1c; color: #fff; border-color: #d98d1c; }
+.status.claimed { background: var(--soft); color: var(--ink); } .status.open { color: var(--muted); }
+.blk { padding: 4px 0; font-size: 13px; cursor: pointer; }
+.blk .details { display: none; margin: 4px 0 6px 0; padding: 6px 8px; background: var(--soft); border-radius: 6px; white-space: pre-wrap; font-size: 12.5px; cursor: auto; }
+.blk.open > .details { display: block; }
+.bar { display: grid; grid-template-columns: 96px 1fr 40px; gap: 8px; align-items: center; font-size: 12.5px; margin: 3px 0; }
+.bar span.track { height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+.bar span.fill { display: block; height: 100%; border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+td, th { text-align: left; padding: 4px 4px; border-bottom: 1px solid var(--soft); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 11.5px; }
+.spark { margin: 4px 0 10px; } .spark .lbl { display: flex; justify-content: space-between; font-size: 12px; } .spark .lbl b { font-variant-numeric: tabular-nums; }
+svg .team-circle { stroke-width: 1.2; }
+svg .society-circle { fill: none; stroke: var(--line); stroke-dasharray: 4 4; }
+svg .agent-circle { stroke: var(--panel); stroke-width: 1.5; cursor: pointer; }
+svg .agent-circle.lead { stroke: var(--ink); stroke-width: 2.4; }
+svg .sel { stroke: var(--accent) !important; stroke-width: 3 !important; }
+svg .team-circle, svg .society-circle { cursor: pointer; }
+svg text { pointer-events: none; font-family: inherit; }
+svg .tlabel { font-size: 11px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+svg .alabel { font-size: 10px; fill: #fff; font-weight: 600; }
+svg .tie { fill: none; stroke: var(--muted); stroke-opacity: .35; stroke-width: 1; }
+svg .tie.team { stroke-dasharray: 3 3; }
+svg .interaction { fill: none; stroke-width: 1.8; stroke-opacity: .85; }
+#empty { padding: 40px; text-align: center; color: var(--muted); }
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; height: auto; }
+  #stage { height: 70vw; min-height: 360px; }
+  aside { border-left: 0; border-top: 1px solid var(--line); min-height: 60vh; }
+  header { padding: 12px 16px; }
+  .stats { display: none; }
+}
+</style>
+</head>
+<body>
+<script id="run-data" type="application/json">/*__RUN_DATA__*/null</script>
+<header>
+  <div class="title-row"><h1>Agent society replay</h1><span class="meta" id="meta"></span></div>
+  <p class="mission" id="mission" title="Click to expand"></p>
+  <div id="banner"></div>
+  <div class="controls">
+    <button id="prev" aria-label="Previous tick">◀</button>
+    <button id="play" aria-label="Play">▶ Play</button>
+    <button id="next" aria-label="Next tick">▶</button>
+    <input type="range" id="tick" min="0" value="0" aria-label="Tick">
+    <span id="tickLabel"></span>
+    <label>View <select id="collapse">
+      <option value="0">all levels</option><option value="1">top superagents</option><option value="2">two levels</option>
+    </select></label>
+    <label><input type="checkbox" id="showTies" checked> ties</label>
+    <label><input type="checkbox" id="showInter" checked> this tick's interactions</label>
+    <button id="theme" aria-label="Toggle theme">◐</button>
+  </div>
+</header>
+<main>
+  <div id="stage"><svg id="svg"></svg><div class="stats" id="stats"></div><div class="legend" id="legend"></div></div>
+  <aside>
+    <div class="tabs" id="tabs"></div>
+    <div id="panel"></div>
+  </aside>
+</main>
+<script>
+let RUN = null;
+try { RUN = JSON.parse(document.getElementById('run-data').textContent); } catch (e) { RUN = null; }
+
+const CATS = ['connect', 'plan', 'write', 'summarize', 'reflect', 'share', 'design', 'read'];
+const catOf = op => op.startsWith('x.') || op.startsWith('design_action') ? 'design' : op.split('.')[0];
+const color = c => `var(--c-${CATS.includes(c) ? c : 'idle'})`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
+const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : String(n);
+
+if (!RUN) {
+  document.querySelector('main').innerHTML = '<div id="empty">No run embedded. Choose a <code>run.json</code>: <input type="file" id="file" accept=".json"></div>';
+  document.getElementById('file').addEventListener('change', async e => {
+    const text = await e.target.files[0].text();
+    document.getElementById('run-data').textContent = text;
+    location.hash = '';
+    RUN = JSON.parse(text);
+    document.querySelector('main').innerHTML = '<div id="stage"><svg id="svg"></svg><div class="stats" id="stats"></div><div class="legend" id="legend"></div></div><aside><div class="tabs" id="tabs"></div><div id="panel"></div></aside>';
+    boot();
+  });
+} else boot();
+
+function boot() {
+  const S = RUN.snapshots, E = RUN.events;
+  const AG = Object.fromEntries(RUN.agents.map(a => [a.id, a]));
+  const BLK = Object.fromEntries(RUN.blocks.map(b => [b.id, b]));
+  const CUS = Object.fromEntries(RUN.custom.map(c => [c.name, c]));
+  const evAt = d3.group(E, e => e.t);
+  const state = { t: S.length - 1, sel: 'society', tab: 'inspect', playing: null };
+
+  const m = RUN.meta;
+  document.getElementById('meta').textContent =
+    `${m.condition} · ${m.backend}${m.model ? ' (' + m.model + ', effort ' + m.effort + ')' : ''} · ${RUN.agents.length} agents · ${S.length - 1} ticks`;
+  const mission = document.getElementById('mission');
+  mission.textContent = m.mission;
+  mission.onclick = () => mission.classList.toggle('open');
+  if (m.backend === 'mock') document.getElementById('banner').innerHTML =
+    '<div class="banner">Mock backend: agents follow scripted random heuristics. This replay tests the plumbing; it is not emergent behavior.</div>';
+
+  document.getElementById('legend').innerHTML = CATS.filter(c => c !== 'read')
+    .map(c => `<span><i style="background:${color(c)}"></i>${c === 'design' ? 'design / custom' : c}</span>`).join('') +
+    `<span><i style="background:var(--c-idle)"></i>idle</span><span><i style="background:none;border:2px solid var(--ink)"></i>de facto lead</span>`;
+
+  const slider = document.getElementById('tick');
+  slider.max = S.length - 1; slider.value = state.t;
+  slider.oninput = () => setT(+slider.value);
+  document.getElementById('prev').onclick = () => setT(Math.max(0, state.t - 1));
+  document.getElementById('next').onclick = () => setT(Math.min(S.length - 1, state.t + 1));
+  document.getElementById('play').onclick = togglePlay;
+  ['collapse', 'showTies', 'showInter'].forEach(id => document.getElementById(id).onchange = () => draw(false));
+  document.getElementById('theme').onclick = () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+    if (e.key === 'ArrowRight') setT(Math.min(S.length - 1, state.t + 1));
+    if (e.key === 'ArrowLeft') setT(Math.max(0, state.t - 1));
+    if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  });
+
+  function togglePlay() {
+    const btn = document.getElementById('play');
+    if (state.playing) { clearInterval(state.playing); state.playing = null; btn.textContent = '▶ Play'; return; }
+    if (state.t >= S.length - 1) setT(0);
+    btn.textContent = '❚❚ Pause';
+    state.playing = setInterval(() => {
+      if (state.t >= S.length - 1) return togglePlay();
+      setT(state.t + 1);
+    }, 1100);
+  }
+
+  function setT(t) { state.t = t; slider.value = t; draw(true); }
+  function select(id) { state.sel = id; state.tab = 'inspect'; draw(false); }
+
+  // ---------------------------------------------------------------- structure map (circle packing = nested superagents)
+  const svg = d3.select('#svg');
+  const gSoc = svg.append('g'), gTies = svg.append('g'), gInter = svg.append('g'), gNodes = svg.append('g');
+  svg.append('defs').selectAll('marker').data(CATS).join('marker')
+    .attr('id', c => 'arrow-' + c).attr('viewBox', '0 0 10 10').attr('refX', 9).attr('refY', 5)
+    .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto-start-reverse')
+    .append('path').attr('d', 'M0,0L10,5L0,10z').style('fill', c => color(c));
+
+  function activity(aid, t) {
+    const counts = {};
+    for (let k = Math.max(1, t - 1); k <= t; k++)
+      for (const e of evAt.get(k) || []) if (e.agent === aid && e.ok && e.op !== 'intent' && !e.op.startsWith('read')) {
+        const c = catOf(e.op); counts[c] = (counts[c] || 0) + (k === t ? 2 : 1);
+      }
+    const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return best ? best[0] : 'idle';
+  }
+
+  function hierarchy(snap, collapse) {
+    const teams = new Map(snap.teams.map(t => [t.id, { id: t.id, kind: 'team', t, children: [] }]));
+    const root = { id: 'society', kind: 'society', children: [], depth: 0 };
+    for (const n of teams.values()) (teams.get(n.t.parent) || root).children.push(n);
+    for (const a of snap.agents) (teams.get(a.team) || root).children.push({ id: a.id, kind: 'agent', a });
+    const count = n => n.kind === 'agent' ? 1 : n.children.reduce((s, c) => s + count(c), 0);
+    (function mark(n, d) { n.d = d; n.count = count(n); n.collapsed = collapse > 0 && n.kind === 'team' && d >= collapse; (n.children || []).forEach(c => mark(c, d + 1)); })(root, 0);
+    return d3.hierarchy(root, n => (n.kind === 'agent' || n.collapsed) ? null : n.children)
+      .sum(n => n.kind === 'agent' ? 1 : n.collapsed ? n.count : (n.kind === 'team' && !n.children.length ? 0.4 : 0))
+      .sort((a, b) => (b.value - a.value) || a.data.id.localeCompare(b.data.id));
+  }
+
+  function draw(animate) {
+    const snap = S[state.t];
+    const el = document.getElementById('stage');
+    const W = el.clientWidth, H = el.clientHeight;
+    svg.attr('viewBox', `0 0 ${W} ${H}`);
+    const collapse = +document.getElementById('collapse').value;
+    const root = d3.pack().size([W - 20, H - 20]).padding(n => n.depth === 0 ? 16 : 9)(hierarchy(snap, collapse));
+    root.each(n => { n.x += 10; n.y += 10; });
+    const pos = new Map(root.descendants().map(n => [n.data.id, n]));
+    const leads = new Set(snap.teams.map(t => t.lead).filter(Boolean));
+    const where = id => pos.get(id) || (() => { // a collapsed agent is drawn at its enclosing superagent
+      const a = snap.agents.find(x => x.id === id); let t = a && a.team;
+      while (t && !pos.has(t)) t = (snap.teams.find(x => x.id === t) || {}).parent;
+      return t ? pos.get(t) : null;
+    })();
+    const dur = animate ? 650 : 0;
+
+    const nodes = gNodes.selectAll('g.node').data(root.descendants(), n => n.data.id);
+    nodes.exit().transition().duration(dur).style('opacity', 0).remove();
+    const enter = nodes.enter().append('g').attr('class', 'node').style('opacity', 0)
+      .attr('transform', n => `translate(${n.x},${n.y})`);
+    enter.append('circle').on('click', (ev, n) => { ev.stopPropagation(); select(n.data.id); });
+    enter.append('text');
+    const all = enter.merge(nodes);
+    all.transition().duration(dur).style('opacity', 1).attr('transform', n => `translate(${n.x},${n.y})`);
+    all.select('circle')
+      .attr('class', n => {
+        const k = n.data.kind;
+        const base = k === 'agent' ? 'agent-circle' + (leads.has(n.data.id) ? ' lead' : '') : k === 'team' ? 'team-circle' : 'society-circle';
+        return base + (n.data.id === state.sel ? ' sel' : '');
+      })
+      .style('fill', n => n.data.kind === 'agent' ? color(activity(n.data.id, state.t))
+        : n.data.kind === 'team' ? (n.data.collapsed ? `var(--stroke${Math.min(n.data.d, 4)})` : `var(--team${Math.min(n.data.d, 4)})`) : null)
+      .style('stroke', n => n.data.kind === 'team' ? `var(--stroke${Math.min(n.data.d, 4)})` : null)
+      .transition().duration(dur).attr('r', n => Math.max(n.r, n.data.kind === 'agent' ? 4 : 0));
+    all.select('text')
+      .attr('class', n => n.data.kind === 'agent' ? 'alabel' : 'tlabel')
+      .attr('text-anchor', 'middle')
+      .attr('dy', n => n.data.kind === 'agent' ? '0.35em' : n.data.collapsed ? '0.35em' : null)
+      .attr('y', n => n.data.kind === 'agent' || n.data.collapsed ? 0 : -n.r + 14)
+      .text(n => {
+        if (n.data.kind === 'agent') return n.r >= 17 ? AG[n.data.id].name : n.r >= 9 ? n.data.id : '';
+        if (n.data.kind === 'society') return '';
+        const label = `${n.data.id} ${n.data.t.name}` + (n.data.collapsed ? ` (${n.data.count})` : '');
+        const max = Math.max(4, Math.floor(n.r / 3.6));
+        return label.length > max ? label.slice(0, max - 1) + '…' : label;
+      });
+    svg.on('click', () => select('society'));
+
+    // ties: persistent links between agents, and agent → team links
+    const ties = [];
+    if (document.getElementById('showTies').checked) {
+      const seen = new Set();
+      for (const a of snap.agents) for (const b of a.links) {
+        const key = [a.id, b].sort().join('|');
+        if (seen.has(key)) continue; seen.add(key);
+        const p = where(a.id), q = b.startsWith('T') ? pos.get(b) : where(b);
+        if (p && q && p !== q) ties.push({ key, p, q, team: b.startsWith('T') });
+      }
+    }
+    gTies.selectAll('path').data(ties, d => d.key).join('path')
+      .attr('class', d => 'tie' + (d.team ? ' team' : ''))
+      .attr('d', d => curve(d.p, d.q, 0.15));
+
+    // this tick's directed interactions: critiques, assignments, invites, reviews, shares
+    const inter = [];
+    if (document.getElementById('showInter').checked) {
+      for (const e of evAt.get(state.t) || []) {
+        if (!e.ok || !e.target || e.target === e.agent) continue;
+        if (!/^(reflect\.(agent|team)|plan\.(assign|verify)|connect\.(invite|link)|share)/.test(e.op)) continue;
+        const p = where(e.agent), q = e.target.startsWith('T') ? pos.get(e.target) : where(e.target);
+        if (p && q && p !== q) inter.push({ p, q, c: catOf(e.op), key: `${e.agent}-${e.op}-${e.target}` });
+      }
+    }
+    gInter.selectAll('path').data(inter, d => d.key).join('path')
+      .attr('class', 'interaction').style('stroke', d => color(d.c))
+      .attr('marker-end', d => `url(#arrow-${d.c})`)
+      .attr('d', d => curve(d.p, d.q, 0.3, d.q.r));
+
+    const mt = snap.metrics;
+    document.getElementById('stats').innerHTML =
+      `<span>teams <b>${mt.teams}</b></span><span>depth <b>${mt.depth}</b></span><span>free <b>${mt.free}</b></span>` +
+      `<span>blocks done <b>${mt.done}/${mt.blocks}</b></span><span>custom actions <b>${mt.custom}</b></span><span>tokens <b>${fmtN(mt.tokens)}</b></span>`;
+    document.getElementById('tickLabel').textContent = `t ${state.t} / ${S.length - 1}`;
+    renderTabs();
+  }
+
+  function curve(p, q, bend, shorten = 0) {
+    const dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
+    const ex = q.x - dx / len * shorten, ey = q.y - dy / len * shorten;
+    const mx = (p.x + ex) / 2 - dy * bend, my = (p.y + ey) / 2 + dx * bend;
+    return `M${p.x},${p.y}Q${mx},${my} ${ex},${ey}`;
+  }
+
+  // ---------------------------------------------------------------- side panel
+  const TABS = [['inspect', 'Inspector'], ['events', 'Events'], ['blocks', 'Blocks'], ['actions', 'Action space'], ['metrics', 'Metrics']];
+  function renderTabs() {
+    document.getElementById('tabs').innerHTML = TABS.map(([k, l]) => `<button data-k="${k}" class="${state.tab === k ? 'on' : ''}">${l}</button>`).join('');
+    document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { state.tab = b.dataset.k; renderTabs(); });
+    const panel = document.getElementById('panel');
+    panel.innerHTML = ({ inspect, events, blocks, actions, metrics })[state.tab]();
+    panel.querySelectorAll('[data-sel]').forEach(x => x.onclick = ev => { ev.stopPropagation(); select(x.dataset.sel); });
+    panel.querySelectorAll('.blk').forEach(x => x.onclick = ev => { if (ev.target.closest('.details')) return; ev.stopPropagation(); x.classList.toggle('open'); });
+    panel.querySelectorAll('.spark').forEach(x => x.onclick = () => setT(+x.dataset.t || state.t));
+  }
+
+  const chip = id => `<span class="chip" data-sel="${esc(id)}">${esc(id)}${AG[id] ? ' ' + esc(AG[id].name) : teamName(id) ? ' ' + esc(teamName(id)) : ''}</span>`;
+  const teamName = id => { const t = S[state.t].teams.find(x => x.id === id) || RUN.teams.find(x => x.id === id); return t && t.name; };
+  const entriesOn = (board, kinds) => RUN.entries.filter(e => e.board === board && e.tick <= state.t && (!kinds || kinds.includes(e.kind)));
+  const entryHTML = e => `<div class="entry k-${esc(e.kind)}"><div class="h">${esc(e.id)} · t${e.tick} · ${esc(e.author)}${AG[e.author] ? ' ' + esc(AG[e.author].name) : ''} · ${esc(e.kind)}${e.via ? ' · via x_' + esc(e.via) : ''}</div><div class="b">${esc(e.content)}</div></div>`;
+  const evHTML = e => e.op === 'intent'
+    ? `<div class="ev intent"><span class="op" style="background:var(--c-idle);color:var(--ink)">intent</span><div><span class="who" data-sel="${esc(e.agent)}">${esc(AG[e.agent].name)}</span> <span class="msg">“${esc(e.msg)}”</span></div></div>`
+    : `<div class="ev ${e.ok ? '' : 'fail'}"><span class="op" style="background:${color(catOf(e.op))}">${esc(e.op)}</span><div><span class="who" data-sel="${esc(e.agent)}">${esc(AG[e.agent].name)}</span>${e.via ? ` <span class="sub">via x_${esc(e.via)}</span>` : ''} <span class="msg">${esc(e.msg)}</span></div></div>`;
+
+  function inspect() {
+    const snap = S[state.t], id = state.sel;
+    if (AG[id]) return inspectAgent(snap, id);
+    const team = snap.teams.find(t => t.id === id);
+    if (team) return inspectTeam(snap, team);
+    if (id !== 'society' && RUN.teams.find(t => t.id === id)) {
+      const t = RUN.teams.find(x => x.id === id);
+      return `<h2>${esc(id)} ${esc(t.name)}</h2><p class="sub">Not active at t${state.t} (created t${t.created}${t.dissolved != null ? ', dissolved t' + t.dissolved : ''}).</p>` +
+        `<h3>Board</h3>${entriesOn('team:' + id).slice(-20).reverse().map(entryHTML).join('') || '<p class="sub">empty</p>'}`;
+    }
+    const tops = snap.teams.filter(t => !t.parent);
+    const free = snap.agents.filter(a => !a.team).map(a => a.id);
+    return `<h2>Society</h2><p class="sub">The outermost superagent. Click any circle to inspect a team (superagent) or an agent.</p>
+      <h3>Top-level superagents</h3>${tops.map(t => chip(t.id)).join('') || '<span class="sub">none yet</span>'}
+      ${free.length ? `<h3>Free agents</h3>${free.map(chip).join('')}` : ''}
+      <h3>Condition</h3><p class="sub">${esc(m.condition_note || m.condition)}</p>
+      ${m.lessons && state.t === S.length - 1 ? `<h3>Organizational retrospective</h3><div class="entry"><div class="b">${esc(m.lessons)}</div></div>` : ''}
+      <h3>Global board</h3>${entriesOn('global').slice(-25).reverse().map(entryHTML).join('') || '<p class="sub">empty</p>'}`;
+  }
+
+  function teamPath(snap, tid) {
+    const out = [];
+    while (tid) { out.push(tid); tid = (snap.teams.find(t => t.id === tid) || {}).parent; }
+    return out;
+  }
+
+  function inspectTeam(snap, t) {
+    const sub = snap.teams.filter(x => x.parent === t.id).map(x => x.id);
+    const inside = new Set(); (function walk(id) { snap.agents.filter(a => a.team === id).forEach(a => inside.add(a.id)); snap.teams.filter(x => x.parent === id).forEach(x => walk(x.id)); })(t.id);
+    const owned = snap.blocks.filter(b => b.owner === t.id);
+    const crit = E.filter(e => e.t <= state.t && e.ok && e.op === 'reflect.team' && e.target === t.id).slice(-8).reverse();
+    const motions = (RUN.motions || []).filter(x => x.team === t.id && x.created <= state.t).slice(-6).reverse();
+    return `<h2>${esc(t.id)} ${esc(t.name)}</h2><p class="sub">Superagent: ${inside.size} agents inside${sub.length ? `, ${sub.length} sub-team(s)` : ''}. Path: ${teamPath(snap, t.id).reverse().map(x => esc(x)).join(' › ')}</p>
+      <div class="kv"><div>Charter</div><div>${esc(t.charter)}</div>
+      <div>Decision rule</div><div>${esc(t.rule)}${t.reps.length ? ' · reps ' + t.reps.map(esc).join(', ') : ''} · ${t.open ? 'open membership' : 'admission required'}</div>
+      <div>De facto lead</div><div>${t.lead ? chip(t.lead) : '<span class="sub">none yet (measured from coordination acts)</span>'}</div>
+      <div>Founder</div><div>${chip(t.founder)} at t${t.created}</div></div>
+      <h3>Direct members</h3>${t.members.map(chip).join('') || '<span class="sub">none</span>'}
+      ${sub.length ? `<h3>Sub-teams</h3>${sub.map(chip).join('')}` : ''}
+      ${owned.length ? `<h3>Blocks owned (its interface)</h3>${owned.map(b => `<div>${esc(b.id)} <span class="status ${b.status}">${b.status}</span> ${esc(b.title)}</div>`).join('')}` : ''}
+      ${motions.length ? `<h3>Motions</h3>${motions.map(x => `<div class="sub">${esc(x.id)} t${x.created} · ${esc(x.status)} · ${esc(x.summary)}</div>`).join('')}` : ''}
+      ${crit.length ? `<h3>Critiques of this organization</h3>${crit.map(evHTML).join('')}` : ''}
+      <h3>Team board</h3>${entriesOn('team:' + t.id).slice(-20).reverse().map(entryHTML).join('') || '<p class="sub">empty</p>'}`;
+  }
+
+  function inspectAgent(snap, id) {
+    const a = AG[id], s = snap.agents.find(x => x.id === id);
+    const mine = E.filter(e => e.agent === id && e.t <= state.t);
+    const counts = d3.rollup(mine.filter(e => e.ok && e.op !== 'intent'), v => v.length, e => catOf(e.op));
+    const intents = mine.filter(e => e.op === 'intent').slice(-4).reverse();
+    const refl = entriesOn('private:' + id, ['reflection']).slice(-5).reverse();
+    const critOf = E.filter(e => e.t <= state.t && e.ok && e.op === 'reflect.agent' && e.target === id).slice(-5).reverse();
+    const max = Math.max(1, ...counts.values());
+    return `<h2>${esc(id)} ${esc(a.name)}</h2><p class="sub">${esc(a.persona || 'no assigned specialty')}</p>
+      <div class="kv"><div>Home team</div><div>${s.team ? teamPath(snap, s.team).map(chip).join(' ‹ ') : '<span class="sub">free agent</span>'}</div>
+      <div>Ties</div><div>${s.links.map(chip).join('') || '<span class="sub">none</span>'}</div>
+      <div>Tokens (run)</div><div>${fmtN(Object.values(a.tokens || {}).reduce((x, y) => x + y, 0))}</div></div>
+      <h3>Actions up to t${state.t}</h3>${CATS.filter(c => counts.get(c)).map(c => `<div class="bar"><span>${c}</span><span class="track"><span class="fill" style="width:${counts.get(c) / max * 100}%;background:${color(c)}"></span></span><span>${counts.get(c)}</span></div>`).join('') || '<p class="sub">none</p>'}
+      ${intents.length ? `<h3>Stated intentions</h3>${intents.map(evHTML).join('')}` : ''}
+      ${refl.length ? `<h3>Self-reflections</h3>${refl.map(entryHTML).join('')}` : ''}
+      ${critOf.length ? `<h3>Critiques received</h3>${critOf.map(evHTML).join('')}` : ''}
+      <h3>Recent actions</h3>${mine.filter(e => e.op !== 'intent').slice(-15).reverse().map(evHTML).join('') || '<p class="sub">none</p>'}`;
+  }
+
+  function events() {
+    const evs = (evAt.get(state.t) || []);
+    const sel = state.sel, filtered = sel === 'society' ? evs : evs.filter(e => e.agent === sel || e.target === sel || (AG[e.agent] && teamPath(S[state.t], (S[state.t].agents.find(a => a.id === e.agent) || {}).team).includes(sel)));
+    const ok = evs.filter(e => e.op !== 'intent'), fails = ok.filter(e => !e.ok).length;
+    return `<p class="sub">${ok.length} actions at t${state.t} (${fails} refused)${sel !== 'society' ? ` · showing those involving ${esc(sel)} <span class="chip" data-sel="society">show all</span>` : ''}. Refused actions are struck through.</p>` +
+      (filtered.map(evHTML).join('') || '<p class="sub">No events.</p>');
+  }
+
+  function blocks() {
+    const snap = S[state.t];
+    const kids = d3.group(snap.blocks, b => b.parent);
+    const row = (b, depth) => {
+      const f = BLK[b.id] || {};
+      const reviews = (f.reviews || []).filter(r => r.t <= state.t);
+      return `<div class="blk" style="margin-left:${depth * 14}px"><span class="status ${b.status}">${b.status}</span> <b>${esc(b.id)}</b> ${esc(b.title)} <span class="sub">${b.owner ? '· ' + esc(b.owner) + (AG[b.owner] ? ' ' + esc(AG[b.owner].name) : teamName(b.owner) ? ' ' + esc(teamName(b.owner)) : '') : '· unowned'}</span>
+        <div class="details">${b.id === 'M0' ? '' : `<b>Spec</b>\n${esc(f.spec || '')}\n\n`}${f.deliverable ? `<b>Deliverable</b> (final version, by ${esc(f.submitted_by)})\n${esc(f.deliverable)}\n\n` : ''}${reviews.map(r => `<b>${esc(r.verdict)}</b> by ${esc(r.by)} t${r.t}: ${esc(r.notes)}`).join('\n')}</div></div>` +
+        (kids.get(b.id) || []).map(c => row(c, depth + 1)).join('');
+    };
+    const counts = d3.rollup(snap.blocks, v => v.length, b => b.status);
+    return `<p class="sub">The mission as a hierarchical spec, chip-design style: blocks with interfaces, owned by agents or teams, integrated upward and signed off by someone else. Click a block for its spec and deliverable. ${['open', 'claimed', 'submitted', 'done'].map(s => `${counts.get(s) || 0} ${s}`).join(' · ')}</p>` +
+      row(snap.blocks.find(b => b.id === 'M0'), 0);
+  }
+
+  function actions() {
+    const upTo = E.filter(e => e.t <= state.t && e.ok && e.op !== 'intent');
+    const byOp = d3.rollup(upTo, v => v.length, e => e.op.startsWith('x.') ? 'x (custom)' : e.op);
+    const ops = [...byOp.entries()].sort((a, b) => b[1] - a[1]);
+    const max = Math.max(1, ...byOp.values());
+    const snap = S[state.t];
+    return `<p class="sub">Primitive actions are the designed action space; custom actions are designed by the agents.</p>
+      <h3>Custom actions at t${state.t}</h3>${snap.custom.length ? `<table><tr><th>action</th><th>by</th><th>adopters</th><th>uses</th></tr>${snap.custom.map(c => `<tr><td><b>x_${esc(c.name)}</b> v${c.version}<div class="sub">${esc((CUS[c.name] || {}).description)}</div><div class="sub"><i>Procedure:</i> ${esc((CUS[c.name] || {}).procedure)}</div></td><td>${chip(c.author)}</td><td>${c.adopters}</td><td>${c.uses}</td></tr>`).join('')}</table>` : '<p class="sub">None defined yet.</p>'}
+      <h3>Action usage up to t${state.t}</h3>${ops.map(([op, n]) => `<div class="bar"><span title="${esc(op)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(op)}</span><span class="track"><span class="fill" style="width:${n / max * 100}%;background:${color(catOf(op === 'x (custom)' ? 'x.' : op))}"></span></span><span>${n}</span></div>`).join('')}`;
+  }
+
+  function metrics() {
+    const keys = [['teams', 'Active teams'], ['depth', 'Hierarchy depth'], ['largest', 'Largest superagent (agents)'], ['free', 'Free agents'],
+      ['links', 'Agent–agent ties'], ['reorganizations', 'Reorganizations (cumulative)'], ['custom', 'Custom actions'], ['custom_uses', 'Custom action uses'],
+      ['done', 'Blocks done'], ['entries', 'Board entries'], ['tokens', 'Tokens used']];
+    const W = 380, H = 46;
+    const x = d3.scaleLinear().domain([0, S.length - 1]).range([2, W - 2]);
+    const spark = ([k, label]) => {
+      const vals = S.map(s => s.metrics[k] || 0);
+      const y = d3.scaleLinear().domain([0, Math.max(1, d3.max(vals))]).range([H - 3, 3]);
+      const path = d3.line().x((_, i) => x(i)).y(v => y(v))(vals);
+      return `<div class="spark"><div class="lbl"><span>${label}</span><b>${k === 'tokens' ? fmtN(vals[state.t]) : vals[state.t]}</b></div>
+        <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}"><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+        <line x1="${x(state.t)}" x2="${x(state.t)}" y1="0" y2="${H}" stroke="var(--muted)" stroke-dasharray="2 2"/><circle cx="${x(state.t)}" cy="${y(vals[state.t])}" r="3" fill="var(--accent)"/></svg></div>`;
+    };
+    const split = S[state.t].metrics.token_split || {};
+    const total = Object.values(split).reduce((a, b) => a + b, 0) || 1;
+    return `<p class="sub">Structure and cost over the whole run; the dashed line marks t${state.t}.</p>${keys.map(spark).join('')}
+      <h3>Where the tokens went (cumulative)</h3>${Object.entries(split).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="bar"><span>${esc(k)}</span><span class="track"><span class="fill" style="width:${v / total * 100}%;background:var(--accent)"></span></span><span>${Math.round(v / total * 100)}%</span></div>`).join('')}`;
+  }
+
+  new ResizeObserver(() => draw(false)).observe(document.getElementById('stage'));
+  draw(false);
+}
+</script>
+</body>
+</html>
